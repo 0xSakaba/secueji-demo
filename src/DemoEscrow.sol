@@ -43,14 +43,17 @@ contract DemoEscrow {
     mapping(uint256 => Escrow) private _escrows;
     /// Per-escrow pause: blocks release and refund of that escrow only.
     mapping(uint256 => bool) public escrowPaused;
+    mapping(bytes32 => uint256[]) private _escrowsByTitle;
 
+    /// `titleId` is the vehicle / order id; it is indexed so every escrow of one
+    /// title can be found from logs (see also `escrowIdsByTitle`).
     event EscrowCreated(
         uint256 indexed escrowId,
+        bytes32 indexed titleId,
         address indexed buyer,
-        address indexed seller,
+        address seller,
         address token,
         uint256 amount,
-        bytes32 titleId,
         address oracle
     );
     event EscrowFunded(uint256 indexed escrowId, address indexed buyer, uint256 amount);
@@ -114,7 +117,8 @@ contract DemoEscrow {
         }
         escrowId = nextEscrowId++;
         _escrows[escrowId] = Escrow(buyer, seller, token, amount, titleId, oracle, State.Created);
-        emit EscrowCreated(escrowId, buyer, seller, token, amount, titleId, oracle);
+        _escrowsByTitle[titleId].push(escrowId);
+        emit EscrowCreated(escrowId, titleId, buyer, seller, token, amount, oracle);
     }
 
     function fund(uint256 escrowId) external {
@@ -190,6 +194,11 @@ contract DemoEscrow {
 
     function getEscrow(uint256 escrowId) external view returns (Escrow memory) {
         return _escrows[escrowId];
+    }
+
+    /// Every escrow created for `titleId`, oldest first, whatever its state.
+    function escrowIdsByTitle(bytes32 titleId) external view returns (uint256[] memory) {
+        return _escrowsByTitle[titleId];
     }
 
     function _requireState(Escrow storage e, State expected) private view {

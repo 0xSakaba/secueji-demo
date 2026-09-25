@@ -38,6 +38,28 @@ contract DemoEscrowTest is Test {
         assertEq(token.balanceOf(address(escrow)), AMOUNT);
     }
 
+    function test_createEmitsIndexedTitle() public {
+        vm.expectEmit(true, true, true, true, address(escrow));
+        emit DemoEscrow.EscrowCreated(1, TITLE, buyer, seller, address(token), AMOUNT, legacyOracle);
+        escrow.createEscrow(buyer, seller, address(token), AMOUNT, TITLE, legacyOracle);
+    }
+
+    function test_escrowIdsByTitle() public {
+        bytes32 other = keccak256("title-002");
+        uint256 a = escrow.createEscrow(buyer, seller, address(token), AMOUNT, TITLE, legacyOracle);
+        uint256 b = escrow.createEscrow(buyer, seller, address(token), AMOUNT, other, legacyOracle);
+        uint256 c = escrow.createEscrow(buyer, seller, address(token), AMOUNT, TITLE, legacyOracle);
+
+        uint256[] memory ids = escrow.escrowIdsByTitle(TITLE);
+        assertEq(ids.length, 2);
+        assertEq(ids[0], a);
+        assertEq(ids[1], c);
+        ids = escrow.escrowIdsByTitle(other);
+        assertEq(ids.length, 1);
+        assertEq(ids[0], b);
+        assertEq(escrow.escrowIdsByTitle(keccak256("unknown")).length, 0);
+    }
+
     function test_onlyAdminCreates() public {
         vm.prank(stranger);
         vm.expectRevert(DemoEscrow.NotAdmin.selector);
