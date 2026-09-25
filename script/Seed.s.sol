@@ -4,28 +4,36 @@ pragma solidity ^0.8.28;
 import {Script, console2} from "forge-std/Script.sol";
 import {DemoStablecoin} from "../src/DemoStablecoin.sol";
 import {DemoEscrow} from "../src/DemoEscrow.sol";
-import {GuardExecutor} from "../src/GuardExecutor.sol";
 
-/// @notice Seeds a deployed stack with the escrows the demo scenarios start
-/// from (used-car marketplace; `titleId` is the vehicle id). On a fresh
-/// deployment the ids are 1 to 6:
+/// @notice Seeds the escrows the demo scenarios start from (used-car
+/// marketplace; `titleId = keccak256(label)` is the vehicle id). The customer
+/// has onboarded secueji with an operator account (OnboardOperator.s.sol), so
+/// escrows released through secueji use `oracle = OPERATOR_ADDRESS`:
 ///
-///   1 vehicle-A  guarded  dUSD   normal release, policy should allow
-///   2 vehicle-B  guarded  dUSD   must not be paid out by a release for vehicle A
-///   3 vehicle-C  legacy   dUSD   bypass: the oracle EOA releases with no approval
-///   4 vehicle-D  legacy   dUSD   second bypass attempt, blocked once paused
-///   5 vehicle-E  guarded  decoy  funded with a lookalike "Demo USD" / dUSD token
-///   6 vehicle-F  guarded  dUSD   buyer has requested a refund
+///   vehicle-A  operator       dUSD   normal release, policy should allow
+///   vehicle-B  operator       dUSD   must not be paid out by a release for vehicle A
+///   vehicle-C  legacy oracle  dUSD   bypass: an old oracle key releases outside secueji
+///   vehicle-D  legacy oracle  dUSD   second bypass attempt, blocked once paused
+///   vehicle-E  operator       decoy  funded with a lookalike "Demo USD" / dUSD token
+///   vehicle-F  operator       dUSD   buyer has requested a refund
 ///
-/// The decoy token is a second DemoStablecoin deployed by the buyer, so its name
-/// and symbol match the real dUSD but its address and minter do not.
+/// Each label gets TITLE_SUFFIX appended, so a re-seed on an existing
+/// deployment can use fresh titles (escrowIdsByTitle then returns one id).
+///
+/// The decoy token is a DemoStablecoin deployed by the buyer, so its name and
+/// symbol match the real dUSD but its address and minter do not. Pass
+/// DECOY_TOKEN_ADDRESS to reuse an existing one. Only missing balances are
+/// minted: dUSD by the deployer (minter), decoy dUSD by the buyer.
 ///
 /// Inputs (environment):
-///   DEPLOYER_PRIVATE_KEY   minter / escrow admin used at deploy time
-///   BUYER_PRIVATE_KEY      buyer that funds every escrow and deploys the decoy
+///   DEPLOYER_PRIVATE_KEY   minter / escrow admin (the customer)
+///   BUYER_PRIVATE_KEY      buyer that funds every escrow
 ///   SELLER_ADDRESS         escrow beneficiary
-///   LEGACY_ORACLE_ADDRESS  EOA oracle for the legacy escrows
-///   TOKEN_ADDRESS, ESCROW_ADDRESS, GUARD_ADDRESS  output of Deploy.s.sol
+///   OPERATOR_ADDRESS       Secueji operator account (oracle of operator escrows)
+///   LEGACY_ORACLE_ADDRESS  old oracle EOA (oracle of the bypass escrows)
+///   TOKEN_ADDRESS, ESCROW_ADDRESS  output of Deploy.s.sol
+///   DECOY_TOKEN_ADDRESS    optional; deploy a new decoy when unset
+///   TITLE_SUFFIX           optional; appended to every label, default empty
 contract Seed is Script {
     struct Plan {
         string label;
@@ -39,10 +47,10 @@ contract Seed is Script {
 
     DemoStablecoin token;
     DemoEscrow escrow;
-    GuardExecutor guard;
     DemoStablecoin decoy;
     address buyer;
     address seller;
+    address operator;
     address legacyOracle;
 
     function run() external returns (uint256[] memory ids, DemoStablecoin decoyToken) {
@@ -50,10 +58,12 @@ contract Seed is Script {
         uint256 buyerKey = vm.envUint("BUYER_PRIVATE_KEY");
         buyer = vm.addr(buyerKey);
         seller = vm.envAddress("SELLER_ADDRESS");
+        operator = vm.envAddress("OPERATOR_ADDRESS");
         legacyOracle = vm.envAddress("LEGACY_ORACLE_ADDRESS");
         token = DemoStablecoin(vm.envAddress("TOKEN_ADDRESS"));
         escrow = DemoEscrow(vm.envAddress("ESCROW_ADDRESS"));
-        guard = GuardExecutor(vm.envAddress("GUARD_ADDRESS"));
+        decoy = DemoStablecoin(vm.envOr("DECOY_TOKEN_ADDRESS", address(0)));
+        string memory suffix = vm.envOr("TITLE_SUFFIX", string(""));
 
         Plan[6] memory plan = [
             Plan("vehicle-A", 18_450e6, false, false),
@@ -66,19 +76,22 @@ contract Seed is Script {
         uint256 realTotal;
         uint256 decoyTotal;
         for (uint256 i; i < plan.length; i++) {
+            plan[i].label = string.concat(plan[i].label, suffix);
             if (plan[i].decoy) decoyTotal += plan[i].amount;
             else realTotal += plan[i].amount;
         }
 
         // A lookalike token anyone could deploy: same name, symbol and decimals.
         vm.startBroadcast(buyerKey);
-        decoy = new DemoStablecoin();
-        decoy.mint(buyer, decoyTotal);
+        if (address(decoy) == address(0)) decoy = new DemoStablecoin();
+        uint256 decoyBalance = decoy.balanceOf(buyer);
+        if (decoyBalance < decoyTotal) decoy.mint(buyer, decoyTotal - decoyBalance);
         vm.stopBroadcast();
 
         ids = new uint256[](plan.length);
         vm.startBroadcast(deployerKey);
-        token.mint(buyer, realTotal);
+        uint256 realBalance = token.balanceOf(buyer);
+        if (realBalance < realTotal) token.mint(buyer, realTotal - realBalance);
         for (uint256 i; i < plan.length; i++) {
             ids[i] = _create(plan[i]);
         }
@@ -94,6 +107,7 @@ contract Seed is Script {
         vm.stopBroadcast();
 
         console2.log("Decoy dUSD token:", address(decoy));
+        console2.log("Operator:        ", operator);
         for (uint256 i; i < plan.length; i++) {
             console2.log(
                 string.concat(
@@ -101,7 +115,7 @@ contract Seed is Script {
                     vm.toString(ids[i]),
                     " ",
                     plan[i].label,
-                    plan[i].legacy ? " legacy" : " guarded",
+                    plan[i].legacy ? " legacy-oracle" : " operator",
                     plan[i].decoy ? " decoy-token" : "",
                     i == REFUND_INDEX ? " refund-requested" : ""
                 )
@@ -118,7 +132,7 @@ contract Seed is Script {
             p.decoy ? address(decoy) : address(token),
             p.amount,
             keccak256(bytes(p.label)),
-            p.legacy ? legacyOracle : address(guard)
+            p.legacy ? legacyOracle : operator
         );
     }
 }
