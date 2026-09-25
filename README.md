@@ -140,35 +140,80 @@ from the secueji MVP spec.
 Private keys are only read from environment variables. `.env` and
 `broadcast/` are git-ignored.
 
-## Deploy to a testnet (placeholder)
+## Base Sepolia deployment
 
-Not set up yet. The target testnet, the RPC provider account (for example
-Alchemy) and the deployer key will be provided later. No credentials are
-stored in this repository.
+The demo is deployed on Base Sepolia (chain id `84532`). The full record is
+[`deployments/base-sepolia.json`](deployments/base-sepolia.json). It has the
+contract addresses, deploy and seed transaction hashes, blocks, role
+addresses, the git commit that was deployed and the EIP-712 domain. ABIs are in
+[`deployments/abi/`](deployments/abi).
 
-When they are available:
+| Contract | Address |
+|---|---|
+| `DemoStablecoin` (dUSD) | [`0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200`](https://sepolia.basescan.org/address/0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200) |
+| `DemoEscrow` | [`0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0`](https://sepolia.basescan.org/address/0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0) |
+| `GuardExecutor` | [`0x06F0b593C999e45fB0514584D8C15E17673c09FB`](https://sepolia.basescan.org/address/0x06F0b593C999e45fB0514584D8C15E17673c09FB) |
 
-1. Set `RPC_URL` in `.env` to the provider's HTTPS endpoint for the chosen
-   testnet, and set `DEPLOYER_PRIVATE_KEY` to a funded testnet-only key.
-2. Set `PLATFORM_SIGNER_ADDRESS` and `APPROVER_ADDRESS`.
-3. Run the same command as for anvil. To verify the sources, also set
-   `ETHERSCAN_API_KEY` and add `--verify`:
+| Role | Address |
+|---|---|
+| Deployer (minter, escrow admin, guard owner) | [`0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90`](https://sepolia.basescan.org/address/0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90) |
+| Platform signer | `0x0804e7c36F61a416DB3155CdA388760C24DbDefc` |
+| Approver | `0x32758061A72fEac22D549d7953B90dece1443731` |
+| Buyer | `0x7D6208024d17fbD699dE085e36bEaAD046f86120` |
+| Seller | `0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d` |
+| Legacy oracle (EOA) | `0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe` |
+
+Seeded escrows. Both are `Funded` with 18,450 dUSD from the buyer to the
+seller:
+
+| Id | Mode | Oracle |
+|---|---|---|
+| `1` | legacy | legacy oracle EOA |
+| `2` | guarded | `GuardExecutor` |
+
+The sources are verified on
+[Blockscout](https://base-sepolia.blockscout.com/address/0x06F0b593C999e45fB0514584D8C15E17673c09FB).
+They are not verified on Basescan yet because that needs an Etherscan API key.
+
+These are testnet-only wallets and mock funds. The keys live only in the
+deployer's local `.env`.
+
+### Redeploying to a testnet
+
+1. In `.env`, set `RPC_URL` to the provider's HTTPS endpoint (for example
+   Alchemy) and `DEPLOYER_PRIVATE_KEY` to a funded key that is only used on
+   testnets. Also set `PLATFORM_SIGNER_ADDRESS` and `APPROVER_ADDRESS`.
+2. Deploy, then seed as described for anvil:
 
    ```sh
    set -a; source .env; set +a
-   forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --verify
+   forge script script/Deploy.s.sol --rpc-url "$RPC_URL" --broadcast --slow
    ```
 
-4. Record the deployed addresses (they are also in
-   `broadcast/Deploy.s.sol/<chainId>/run-latest.json`, which stays local).
+3. Verify the sources. Blockscout needs no API key:
+
+   ```sh
+   forge verify-contract --chain 84532 --verifier blockscout \
+     --verifier-url https://base-sepolia.blockscout.com/api/ \
+     <address> src/DemoEscrow.sol:DemoEscrow
+   ```
+
+   For `GuardExecutor`, add
+   `--constructor-args $(cast abi-encode "constructor(address,address)" <escrow> <platformSigner>)`.
+   To verify on Basescan instead, set `ETHERSCAN_API_KEY` and pass `--verify`
+   to `forge script`.
+
+4. Update `deployments/<network>.json`. The raw data is in
+   `broadcast/<Script>.s.sol/<chainId>/run-latest.json`, which stays local.
 
 ## Layout
 
 ```
-src/        contracts
-test/       forge tests
-script/     Deploy.s.sol, Seed.s.sol
-lib/        forge-std (git submodule)
+src/          contracts
+test/         forge tests
+script/       Deploy.s.sol, Seed.s.sol
+deployments/  deployment records and ABIs per network
+lib/          forge-std (git submodule)
 ```
 
 ## Open items
@@ -176,4 +221,4 @@ lib/        forge-std (git submodule)
 - License is `UNLICENSED` pending a decision.
 - Approver set and platform signer are owner-managed single keys; no multisig
   or rotation policy.
-- Testnet choice, RPC endpoint and deployer key are still to be provided.
+- Sources are not verified on Basescan yet (they are verified on Blockscout).
