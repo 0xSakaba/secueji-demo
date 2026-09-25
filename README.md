@@ -2,7 +2,7 @@
 
 Sandbox smart contracts used as the demo target project for
 secueji. They reproduce a common escrow control
-gap and show one way to close it on-chain.
+gap: whoever holds the oracle key can release funds.
 
 The demo story is a used-car escrow marketplace: a buyer deposits dUSD into an
 escrow, the marketplace checks payment and the vehicle inspection, and an
@@ -10,68 +10,95 @@ operator then releases the funds to the seller. `titleId` is the vehicle id.
 
 Not audited. Mock funds only. Deploy only to local chains and testnets.
 
+## How the demo uses secueji
+
+secueji is a general platform. It does not know how a customer's contracts
+work internally and asks for no special on-chain integration. To onboard, the
+customer (here: the marketplace, which is the escrow admin) gives secueji only:
+
+1. **The ABI** of the contracts to manage and watch.
+2. **An operator account** and the contract permissions that account holds.
+   Here the Secueji operator is the `oracle` of every escrow secueji manages
+   (so it can `release`) and the escrow `guardian` (so it can `pause`, never
+   unpause or move funds). The admin role stays with the customer.
+3. **A business description and policies**, for example "release only in
+   dUSD", "a vehicle's payment comes only from that vehicle's escrow", "hold a
+   release while the buyer disputes the deal".
+
+A managed release is then: ABI form in secueji → policy decision → human
+review in the secueji UI if the policy asks for it (nothing is sent before
+approval) → secueji sends `release(id)` from the operator account. No approver
+signature is checked on-chain. Monitoring watches the same contracts and, when
+funds move outside secueji (a release whose caller is not the operator), the
+operator pauses the escrow as guardian.
+
 ## Contracts
 
 | Contract | Purpose |
 |---|---|
 | `DemoStablecoin` | Minimal 6-decimal ERC20 ("Demo USD", `dUSD`) used as settlement currency |
 | `DemoEscrow` | Escrow whose release authority is only `msg.sender == escrow.oracle`. This is the control gap: the contract knows nothing about application-level approval. It also has a guardian pause, a buyer refund request flag and a `titleId` index |
-| `GuardExecutor` | Acts as the oracle for guarded escrows. Releases only with a human EIP-712 approval and a platform authorization over the same intent |
+| `GuardExecutor` | **Earlier design, not on the demo path.** An oracle contract that releases only with a human EIP-712 approval and a platform authorization over the same intent, i.e. the contract enforces platform signatures. It is kept in the repo and in the deployment record, but no current scenario escrow uses it |
 
 The contracts have no external dependencies. `forge-std` is only used by the
 tests and scripts.
 
-### Legacy and guarded mode
+### Operator and legacy escrows
 
-Both modes use the same `DemoEscrow`. The oracle picked when an escrow is
-created decides the mode:
+Every escrow uses the same `DemoEscrow`. The oracle picked when an escrow is
+created decides who can release it:
 
-- **Legacy**: the oracle is an EOA. Whoever holds that key can release funds
-  without any approval.
-- **Guarded**: the oracle is `GuardExecutor`. Funds move only through
-  `GuardExecutor.execute` with valid signatures. The old oracle EOA can no
-  longer release.
-
-Because of this, one fixture can be replayed in both modes.
+- **Operator escrow**: the oracle is the Secueji operator account. It is
+  released only when secueji sends the transaction, after its policy (and, if
+  needed, a human in the secueji UI) allowed it.
+- **Legacy escrow**: the oracle is some other EOA, here an old oracle key the
+  customer never rotated (or one that leaked). Whoever holds it can release
+  with no policy and no review. This is the bypass the monitor has to catch.
 
 ### Pause, refund request and title lookup
 
-- **Pause.** The guardian or the admin can call `pause()` (stops every
-  `release` and `refund`) or `pauseEscrow(id)` (stops one escrow). Only the
-  admin can `unpause()` / `unpauseEscrow(id)`, so the guardian can stop funds
-  but never move them. A guarded release through `GuardExecutor` reverts while
-  paused too. Events: `Paused`, `Unpaused`, `EscrowPaused`, `EscrowUnpaused`,
-  `GuardianSet`.
+- **Pause.** The guardian (the Secueji operator after onboarding) or the admin
+  can call `pause()` (stops every `release` and `refund`) or `pauseEscrow(id)`
+  (stops one escrow). Only the admin can `unpause()` / `unpauseEscrow(id)`, so
+  the guardian can stop funds but never move them. A pause stops the operator's
+  own releases too. Events: `Paused`, `Unpaused`, `EscrowPaused`,
+  `EscrowUnpaused`, `GuardianSet`.
 - **Refund request.** The buyer of a funded escrow can call
   `requestRefund(id, reason)`. It stores `refundRequestedAt[id]` (block
   timestamp) and emits `RefundRequested(escrowId, titleId, buyer, reason)`.
   **Demo design:** it deliberately does not block `release`. Deciding that a
-  release conflicts with a pending refund request is left to the policy that
-  authorizes guarded releases. A production escrow would likely enforce it
-  on-chain as well.
+  release conflicts with a pending refund request is left to the secueji
+  policy. A production escrow would likely enforce it on-chain as well.
 - **Title lookup.** `EscrowCreated` indexes `titleId`, and
-  `escrowIdsByTitle(titleId)` returns every escrow of a vehicle.
+  `escrowIdsByTitle(titleId)` returns every escrow of a vehicle, whatever its
+  state.
 
 ## Roles and permissions
 
 | Role | Where | Can do |
 |---|---|---|
 | Minter | `DemoStablecoin.minter` (deployer, immutable) | `mint` |
-| Admin | `DemoEscrow.admin` (deployer, immutable) | `createEscrow`, `refund` (Funded), `cancel` (Created), `setGuardian`, `pause`, `pauseEscrow`, `unpause`, `unpauseEscrow` |
-| Guardian | `DemoEscrow.guardian` (deployer by default, admin can change) | `pause`, `pauseEscrow` (never unpause) |
+| Admin (the customer) | `DemoEscrow.admin` (deployer, immutable) | `createEscrow`, `refund` (Funded), `cancel` (Created), `setGuardian`, `pause`, `pauseEscrow`, `unpause`, `unpauseEscrow` |
+| Secueji operator | per-escrow `oracle` of operator escrows, and `DemoEscrow.guardian` | `release` of its own escrows, `pause`, `pauseEscrow` (never unpause) |
+| Legacy oracle | per-escrow `oracle` of legacy escrows | `release` of those escrows |
 | Buyer | per escrow | `fund` (moves `amount` from buyer to escrow; needs allowance), `requestRefund` (Funded, once) |
-| Oracle | per escrow (EOA or `GuardExecutor`) | `release` (pays the seller) |
-| Owner | `GuardExecutor.owner` (deployer) | `setApprover`, `setPlatformSigner`, `transferOwnership` |
-| Approver | `GuardExecutor.isApprover` | Signs `ReleaseIntent` (EIP-712) off-chain |
-| Platform signer | `GuardExecutor.platformSigner` | Signs `Authorization` (EIP-712) off-chain |
-| Anyone | | Submits a valid bundle to `GuardExecutor.execute`; the signatures are the authority |
+| GuardExecutor owner, approver, platform signer | `GuardExecutor` | Earlier design only (see below) |
+
+The guardian defaults to the deployer; `script/OnboardOperator.s.sol` hands it
+to the operator.
 
 Escrow lifecycle: `Created → Funded → Released | Refunded`, or
 `Created → Cancelled`. Terms are fixed at creation and release is one-shot, so
 an escrow can never pay out twice. `release` and `refund` revert with
 `ContractPaused` or `EscrowIsPaused(id)` while a pause applies.
 
-### What GuardExecutor checks, in order
+### GuardExecutor (earlier design, not on the demo path)
+
+GuardExecutor was a first attempt where the escrow's oracle is a contract that
+checks an approver's EIP-712 `ReleaseIntent` and a platform `Authorization`
+before calling `release`. It ties the customer's contract to secueji's
+signature format, which a general platform should not require, so the demo no
+longer uses it. It is still built, tested and deployed. Its checks, in order:
 
 1. Intent targets the configured escrow contract → `WrongEscrowContract`
 2. Intent nonce unused → `NonceUsed`
@@ -84,12 +111,8 @@ an escrow can never pay out twice. `release` and `refund` revert with
 
 Then it consumes the nonce, emits `GuardedRelease` and calls `release`.
 Nonces are global per `GuardExecutor`. EIP-712 domain: name `GuardExecutor`,
-version `1`.
-
-GuardExecutor does not know which token the business accepts or whether the
-buyer asked for a refund. An intent over a lookalike token, or over an escrow
-with a pending refund request, passes these checks if both parties signed it.
-Those decisions belong to the platform policy (see [Demo scenarios](#demo-scenarios)).
+version `1`. Owner functions: `setApprover`, `setPlatformSigner`,
+`transferOwnership`.
 
 ## Requirements
 
@@ -120,10 +143,13 @@ forge test          # add -vvv for traces
 | `test/DemoStablecoin.t.sol` | Minting, transfers, allowances |
 | `test/DemoEscrow.t.sol` | Create/fund, indexed `titleId` and `escrowIdsByTitle`, legacy release with no approval, one-shot release, oracle-only release (fuzz), refund, cancel, buyer refund request (buyer only, Funded only, once, does not block release) |
 | `test/DemoEscrowPause.t.sol` | Guardian role, global and per-escrow pause, who can pause and unpause (fuzz), events, pause blocks legacy release, guarded release and refund |
-| `test/GuardExecutor.t.sol` | Valid guarded release, missing/foreign approval, oracle EOA bypass, terms mismatches, nonce replay, expired intent/authorization, mismatched or forged authorization, wrong escrow contract |
+| `test/OperatorModel.t.sol` | Operator releases only its own escrows, has no admin powers, pauses as guardian after a bypass, is itself stopped by a pause until the admin unpauses, is not blocked on-chain by a refund request |
+| `test/Scripts.t.sol` | Deploy, OnboardOperator, Seed, RetireEscrows and the scenario scripts end to end (the same sequence as the Base Sepolia re-seed) |
+| `test/GuardExecutor.t.sol` | Earlier design: valid guarded release, missing/foreign approval, oracle EOA bypass, terms mismatches, nonce replay, expired intent/authorization, mismatched or forged authorization, wrong escrow contract |
 
 Test names carry scenario (`S-xxx`) and acceptance-criterion (`AC-xxx`) IDs
-from the secueji MVP spec.
+from the secueji MVP spec. The tests run offline. forge loads `.env`
+automatically, so `test/Scripts.t.sol` sets every variable the scripts read.
 
 ## Deploy to local anvil
 
@@ -135,43 +161,41 @@ from the secueji MVP spec.
 
    anvil prints ten funded accounts with their private keys.
 
-2. Create `.env` from the template and fill it in:
+2. Create `.env` from the template and fill it in with anvil accounts:
 
    ```sh
    cp .env.example .env
    ```
 
-   - `DEPLOYER_PRIVATE_KEY`: one of anvil's private keys
-   - `PLATFORM_SIGNER_ADDRESS`, `APPROVER_ADDRESS`: two other anvil addresses
-     (keep their keys for signing intents and authorizations off-chain)
-   - `GUARDIAN_ADDRESS` (optional): account allowed to pause; defaults to the
-     deployer
+   - `DEPLOYER_PRIVATE_KEY`: the customer (minter and escrow admin)
+   - `OPERATOR_ADDRESS`, `OPERATOR_PRIVATE_KEY`: the Secueji operator account
+   - `BUYER_PRIVATE_KEY`, `SELLER_ADDRESS`, `LEGACY_ORACLE_ADDRESS`,
+     `LEGACY_ORACLE_PRIVATE_KEY`: the scenario actors
+   - leave `PLATFORM_SIGNER_ADDRESS` empty unless you also want GuardExecutor
 
-3. Deploy:
+3. Deploy, onboard the operator and seed the scenario escrows:
 
    ```sh
    set -a; source .env; set +a
    export ETH_RPC_URL="$RPC_URL"
    forge script script/Deploy.s.sol --rpc-url "$ETH_RPC_URL" --broadcast
-   ```
-
-   The script logs the `DemoStablecoin`, `DemoEscrow` and `GuardExecutor`
-   addresses. The deployer becomes minter, escrow admin, default guardian and
-   guard owner.
-
-4. Optional: seed the scenario escrows. Put the deployed addresses and
-   `BUYER_PRIVATE_KEY`, `SELLER_ADDRESS`, `LEGACY_ORACLE_ADDRESS` into `.env`,
-   then:
-
-   ```sh
-   set -a; source .env; set +a
-   export ETH_RPC_URL="$RPC_URL"
+   # put the printed TOKEN_ADDRESS and ESCROW_ADDRESS into .env, then source it again
+   forge script script/OnboardOperator.s.sol --rpc-url "$ETH_RPC_URL" --broadcast
    forge script script/Seed.s.sol --rpc-url "$ETH_RPC_URL" --broadcast
    ```
 
-   On a fresh deployment this creates escrows `1` to `6` (see
-   [Demo scenarios](#demo-scenarios)) and deploys the decoy dUSD token from the
-   buyer account.
+   `OnboardOperator` makes the operator the escrow guardian and tops it up to
+   `OPERATOR_GAS_WEI` (default 0.01 ETH). On a fresh deployment `Seed` creates
+   escrows `1` to `6` with labels `vehicle-A` … `vehicle-F` and deploys a decoy
+   dUSD token from the buyer. Set `DECOY_TOKEN_ADDRESS` to reuse a decoy, and
+   `TITLE_SUFFIX` (for example `-2`) to give a re-seed fresh titles. Only
+   missing token balances are minted.
+
+4. To take an old scenario set out of play, the admin refunds it:
+
+   ```sh
+   ESCROW_IDS=1,2,3,4,5,6 forge script script/RetireEscrows.s.sol --rpc-url "$ETH_RPC_URL" --broadcast
+   ```
 
 Private keys are only read from environment variables. `.env` and
 `broadcast/` are git-ignored. Keep the RPC URL in an environment variable
@@ -181,26 +205,34 @@ in the URL does not end up in shell history or pasted logs.
 ## Base Sepolia deployment
 
 The demo is deployed on Base Sepolia (chain id `84532`). The full record is
-[`deployments/base-sepolia.json`](deployments/base-sepolia.json) (version 2).
-It has the contract addresses, deploy and seed transaction hashes, blocks,
-role addresses, the seeded escrows, the git commit that was deployed and the
-EIP-712 domain. ABIs are in [`deployments/abi/`](deployments/abi).
+[`deployments/base-sepolia.json`](deployments/base-sepolia.json) (contracts
+version 2). It has the contract addresses, deploy, onboarding and seed
+transaction hashes, blocks, role addresses, the current scenario escrows with
+their expected decisions, the retired escrows, the git commits and the
+GuardExecutor EIP-712 domain. ABIs are in [`deployments/abi/`](deployments/abi).
 
 | Contract | Address |
 |---|---|
 | `DemoStablecoin` (dUSD) | [`0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78`](https://sepolia.basescan.org/address/0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78) |
 | `DemoEscrow` | [`0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B`](https://sepolia.basescan.org/address/0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B) |
-| `GuardExecutor` | [`0x375e5a2A56F1Bc4eE92B6137645661019cac375B`](https://sepolia.basescan.org/address/0x375e5a2A56F1Bc4eE92B6137645661019cac375B) |
+| `GuardExecutor` (earlier design, not on the demo path) | [`0x375e5a2A56F1Bc4eE92B6137645661019cac375B`](https://sepolia.basescan.org/address/0x375e5a2A56F1Bc4eE92B6137645661019cac375B) |
 | Decoy dUSD (scenario only, not a project contract) | [`0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69`](https://sepolia.basescan.org/address/0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69) |
 
 | Role | Address |
 |---|---|
-| Deployer (minter, escrow admin, escrow guardian, guard owner) | [`0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90`](https://sepolia.basescan.org/address/0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90) |
-| Platform signer | `0x0804e7c36F61a416DB3155CdA388760C24DbDefc` |
-| Approver | `0x32758061A72fEac22D549d7953B90dece1443731` |
+| Deployer = customer (minter, escrow admin, guard owner) | [`0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90`](https://sepolia.basescan.org/address/0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90) |
+| Secueji operator (oracle of operator escrows, escrow guardian) | [`0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5`](https://sepolia.basescan.org/address/0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5) |
 | Buyer (also minter of the decoy token) | `0x7D6208024d17fbD699dE085e36bEaAD046f86120` |
 | Seller | `0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d` |
-| Legacy oracle (EOA) | `0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe` |
+| Legacy oracle (old key outside secueji) | `0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe` |
+| GuardExecutor platform signer (earlier design) | `0x0804e7c36F61a416DB3155CdA388760C24DbDefc` |
+| GuardExecutor approver (earlier design) | `0x32758061A72fEac22D549d7953B90dece1443731` |
+
+The operator was onboarded with `setGuardian`
+([`0x696a721b…60eb64`](https://sepolia.basescan.org/tx/0x696a721b3a704181910c0c052d11d2f934a342d8ad47b793abcfbc322460eb64))
+and 0.01 ETH for gas. The contracts were not redeployed for the operator model:
+`DemoEscrow` already lets every escrow pick its oracle and has the guardian
+role.
 
 The sources of all four contracts are verified on
 [Blockscout](https://base-sepolia.blockscout.com/address/0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B).
