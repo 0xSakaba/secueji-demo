@@ -1,0 +1,156 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "deployedAt": "2026-09-25T13:03:02Z",
+  "gitCommit": "2470061de1e8cf12a896f01114e875bb553cb45e",
+  "compiler": {
+    "solc": "0.8.28",
+    "evmVersion": "cancun",
+    "optimizer": true,
+    "optimizerRuns": 200
+  },
+  "sourceVerification": {
+    "blockscout": "verified",
+    "basescan": "not verified (no Etherscan API key)"
+  },
+  "contracts": {
+    "DemoStablecoin": {
+      "address": "0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200",
+      "source": "src/DemoStablecoin.sol",
+      "abi": "deployments/abi/DemoStablecoin.json",
+      "constructorArgs": [],
+      "deployTx": "0xfa420cbc957d8274ed80b8448fb6655be823c403e02098592accf2a618da78eb",
+      "block": 47286547,
+      "basescan": "https://sepolia.basescan.org/address/0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200"
+    },
+    "DemoEscrow": {
+      "address": "0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0",
+      "source": "src/DemoEscrow.sol",
+      "abi": "deployments/abi/DemoEscrow.json",
+      "constructorArgs": [],
+      "deployTx": "0x2d9ed5731de1b1431144efe1e9da0b5669f5e84c8a2c2d349ab4afc76223fe2b",
+      "block": 47286548,
+      "basescan": "https://sepolia.basescan.org/address/0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0"
+    },
+    "GuardExecutor": {
+      "address": "0x06F0b593C999e45fB0514584D8C15E17673c09FB",
+      "source": "src/GuardExecutor.sol",
+      "abi": "deployments/abi/GuardExecutor.json",
+      "constructorArgs": [
+        "0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0",
+        "0x0804e7c36F61a416DB3155CdA388760C24DbDefc"
+      ],
+      "deployTx": "0xf28652e07f29b475689802616fda6d6a884102c8ad6ca239210219b275695f69",
+      "block": 47286549,
+      "basescan": "https://sepolia.basescan.org/address/0x06F0b593C999e45fB0514584D8C15E17673c09FB",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0x06F0b593C999e45fB0514584D8C15E17673c09FB",
+      "eip712Domain": {
+        "name": "GuardExecutor",
+        "version": "1",
+        "chainId": 84532,
+        "verifyingContract": "0x06F0b593C999e45fB0514584D8C15E17673c09FB",
+        "domainSeparator": "0x5ed3ce9d7f1aad21bf895ab510bf98d799a9cd9bda36a76f395c3984f9030cc6"
+      }
+    }
+  },
+  "roles": {
+    "deployer": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "stablecoinMinter": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "escrowAdmin": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "guardOwner": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "platformSigner": "0x0804e7c36F61a416DB3155CdA388760C24DbDefc",
+    "approvers": [
+      "0x32758061A72fEac22D549d7953B90dece1443731"
+    ],
+    "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+    "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+    "legacyOracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe"
+  },
+  "deployTransactions": [
+    {
+      "action": "create DemoStablecoin",
+      "hash": "0xfa420cbc957d8274ed80b8448fb6655be823c403e02098592accf2a618da78eb",
+      "block": 47286547
+    },
+    {
+      "action": "create DemoEscrow",
+      "hash": "0x2d9ed5731de1b1431144efe1e9da0b5669f5e84c8a2c2d349ab4afc76223fe2b",
+      "block": 47286548
+    },
+    {
+      "action": "create GuardExecutor",
+      "hash": "0xf28652e07f29b475689802616fda6d6a884102c8ad6ca239210219b275695f69",
+      "block": 47286549
+    },
+    {
+      "action": "GuardExecutor.setApprover(approver, true)",
+      "hash": "0xa544851f41bb4003007c9087f0305ab14a2c1c8df9ae45d295a59acd436165d0",
+      "block": 47286550
+    }
+  ],
+  "seed": {
+    "script": "script/Seed.s.sol",
+    "escrows": [
+      {
+        "id": 1,
+        "mode": "legacy",
+        "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200",
+        "amount": "18450000000",
+        "amountDisplay": "18450 dUSD",
+        "titleLabel": "title-legacy",
+        "titleId": "0x8f7233fc8e2d00756800fa1c81664e489ca7cc43a128acd79560c38f1d56d341",
+        "stateAfterSeed": "Funded"
+      },
+      {
+        "id": 2,
+        "mode": "guarded",
+        "oracle": "0x06F0b593C999e45fB0514584D8C15E17673c09FB",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200",
+        "amount": "18450000000",
+        "amountDisplay": "18450 dUSD",
+        "titleLabel": "title-guarded",
+        "titleId": "0x5e140e7dfe96d80eb7ca4aed193882d9ab38a1218f5cb0015af99111dbbe71f0",
+        "stateAfterSeed": "Funded"
+      }
+    ],
+    "transactions": [
+      {
+        "action": "DemoStablecoin.mint(buyer, 36900 dUSD) by deployer",
+        "hash": "0x85c6dec6935c2637fa1f2638dd1ae3e7efef383c1f8518ca0dc10ad061879d10",
+        "block": 47286558
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 1 (legacy) by admin",
+        "hash": "0xed7daf8d4baec89ab06421595f208414169c00052a77fe618bdd1a1b3ac95524",
+        "block": 47286559
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 2 (guarded) by admin",
+        "hash": "0x8f377930b2c97c445a19a3addda5077a7cc771cf2ea04d9d6bcf657b6d980b8d",
+        "block": 47286560
+      },
+      {
+        "action": "DemoStablecoin.approve(escrow, 36900 dUSD) by buyer",
+        "hash": "0xefee32e3d492c4d52e45f07b6a96cc01b2aab239dcf3c9bb40d8b4b52b726def",
+        "block": 47286561
+      },
+      {
+        "action": "DemoEscrow.fund(1) by buyer",
+        "hash": "0xf94912c91cca2f090f5b309ddc3c60e247c3f87bb1adb63230b904b9e318974b",
+        "block": 47286563
+      },
+      {
+        "action": "DemoEscrow.fund(2) by buyer",
+        "hash": "0x016e6cac5f10451193b0ca7b77ec2ecd7a99f616396a47c27b038ce5db45366d",
+        "block": 47286564
+      }
+    ]
+  }
+}
