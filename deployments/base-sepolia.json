@@ -1,0 +1,315 @@
+{
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "version": 2,
+  "status": "active",
+  "deployedAt": "2026-09-25T18:14:35Z",
+  "gitCommit": "edd17521333f8057ff615571593d9c74590f756c",
+  "compiler": {
+    "solc": "0.8.28",
+    "evmVersion": "cancun",
+    "optimizer": true,
+    "optimizerRuns": 200
+  },
+  "sourceVerification": {
+    "blockscout": "verified (all contracts, including the decoy token)",
+    "basescan": "not verified (no Etherscan API key)"
+  },
+  "contracts": {
+    "DemoStablecoin": {
+      "address": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+      "source": "src/DemoStablecoin.sol",
+      "abi": "deployments/abi/DemoStablecoin.json",
+      "constructorArgs": [],
+      "deployTx": "0x41154bcc2840b31b2a408733a5e71cb77d9473c29f7679085742a15a97302369",
+      "block": 47295891,
+      "basescan": "https://sepolia.basescan.org/address/0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78"
+    },
+    "DemoEscrow": {
+      "address": "0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B",
+      "source": "src/DemoEscrow.sol",
+      "abi": "deployments/abi/DemoEscrow.json",
+      "constructorArgs": [],
+      "deployTx": "0xc7b482af916e73c48b696519ed66dcb717d43c3e9aad2f47328b272e1c735b2a",
+      "block": 47295892,
+      "basescan": "https://sepolia.basescan.org/address/0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B"
+    },
+    "GuardExecutor": {
+      "address": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+      "source": "src/GuardExecutor.sol",
+      "abi": "deployments/abi/GuardExecutor.json",
+      "constructorArgs": [
+        "0x8e14ca274AD1B249b99A1297b81eAFeDAa2EfD5B",
+        "0x0804e7c36F61a416DB3155CdA388760C24DbDefc"
+      ],
+      "deployTx": "0x42ff99fdd4bb15eb90c40b66195c0705f0364a26a8989282fe7c22492770a69e",
+      "block": 47295893,
+      "basescan": "https://sepolia.basescan.org/address/0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+      "eip712Domain": {
+        "name": "GuardExecutor",
+        "version": "1",
+        "chainId": 84532,
+        "verifyingContract": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "domainSeparator": "0xa1e97c23c3df9c6b6b5f96998626bbc592ac52c1cdaa3474e54c41738ba66f87"
+      }
+    }
+  },
+  "scenarioContracts": {
+    "DecoyStablecoin": {
+      "address": "0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69",
+      "source": "src/DemoStablecoin.sol",
+      "abi": "deployments/abi/DemoStablecoin.json",
+      "constructorArgs": [],
+      "deployTx": "0xf829e3465c190427a9b6ec65abb667d6ad4a33c369a644e6d997a411bfa8bfe2",
+      "block": 47295907,
+      "deployer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+      "basescan": "https://sepolia.basescan.org/address/0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69",
+      "blockscout": "https://base-sepolia.blockscout.com/address/0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69",
+      "note": "Lookalike token for the token-mismatch scenario. Same code, name (\"Demo USD\"), symbol (dUSD) and decimals as the real DemoStablecoin, but a different address and minter (the buyer). Not part of the project; never an accepted settlement token."
+    }
+  },
+  "roles": {
+    "deployer": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "stablecoinMinter": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "escrowAdmin": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "escrowGuardian": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "guardOwner": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "platformSigner": "0x0804e7c36F61a416DB3155CdA388760C24DbDefc",
+    "approvers": [
+      "0x32758061A72fEac22D549d7953B90dece1443731"
+    ],
+    "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+    "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+    "legacyOracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+    "decoyTokenMinter": "0x7D6208024d17fbD699dE085e36bEaAD046f86120"
+  },
+  "deployTransactions": [
+    {
+      "action": "create DemoStablecoin",
+      "hash": "0x41154bcc2840b31b2a408733a5e71cb77d9473c29f7679085742a15a97302369",
+      "block": 47295891
+    },
+    {
+      "action": "create DemoEscrow",
+      "hash": "0xc7b482af916e73c48b696519ed66dcb717d43c3e9aad2f47328b272e1c735b2a",
+      "block": 47295892
+    },
+    {
+      "action": "create GuardExecutor",
+      "hash": "0x42ff99fdd4bb15eb90c40b66195c0705f0364a26a8989282fe7c22492770a69e",
+      "block": 47295893
+    },
+    {
+      "action": "GuardExecutor.setApprover(approver, true)",
+      "hash": "0x111527be96ee3465007f73cdf7d9c866ac89c1df3c23df1919d84354aad39cfe",
+      "block": 47295894
+    }
+  ],
+  "seed": {
+    "script": "script/Seed.s.sol",
+    "escrows": [
+      {
+        "id": 1,
+        "scenario": "normal-release",
+        "mode": "guarded",
+        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+        "tokenIsDecoy": false,
+        "amount": "18450000000",
+        "amountDisplay": "18450 dUSD",
+        "titleLabel": "vehicle-A",
+        "titleId": "0x697a7d6c2300463e5ae9ba40b7c86a4015b278472e690488bccc0cf4b63d3025",
+        "stateAfterSeed": "Funded",
+        "refundRequested": false
+      },
+      {
+        "id": 2,
+        "scenario": "payment-mapping",
+        "mode": "guarded",
+        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+        "tokenIsDecoy": false,
+        "amount": "21300000000",
+        "amountDisplay": "21300 dUSD",
+        "titleLabel": "vehicle-B",
+        "titleId": "0x313db1dcad1cfc44f6420fac6e046c39010b41afa43250d10900260e9fe90b81",
+        "stateAfterSeed": "Funded",
+        "refundRequested": false
+      },
+      {
+        "id": 3,
+        "scenario": "bypass-release",
+        "mode": "legacy",
+        "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+        "tokenIsDecoy": false,
+        "amount": "12800000000",
+        "amountDisplay": "12800 dUSD",
+        "titleLabel": "vehicle-C",
+        "titleId": "0x69b9726beacb9ab4324a45b351d3b7eba11118410a1ffa56bdaca2b838ac44ec",
+        "stateAfterSeed": "Funded",
+        "refundRequested": false
+      },
+      {
+        "id": 4,
+        "scenario": "bypass-release-after-pause",
+        "mode": "legacy",
+        "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+        "tokenIsDecoy": false,
+        "amount": "9750000000",
+        "amountDisplay": "9750 dUSD",
+        "titleLabel": "vehicle-D",
+        "titleId": "0x056dd5b246bc124f228ced3358a78c2cc81b24d72982e56d76b9fb82a45ba0dd",
+        "stateAfterSeed": "Funded",
+        "refundRequested": false
+      },
+      {
+        "id": 5,
+        "scenario": "token-mismatch",
+        "mode": "guarded",
+        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69",
+        "tokenIsDecoy": true,
+        "amount": "18450000000",
+        "amountDisplay": "18450 dUSD",
+        "titleLabel": "vehicle-E",
+        "titleId": "0x4c95527ed2e5ece74d6bfa22de52df4193c0a0f74fde1f9cf1117c70aeaaa83f",
+        "stateAfterSeed": "Funded",
+        "refundRequested": false
+      },
+      {
+        "id": 6,
+        "scenario": "refund-conflict",
+        "mode": "guarded",
+        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+        "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+        "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+        "tokenIsDecoy": false,
+        "amount": "16900000000",
+        "amountDisplay": "16900 dUSD",
+        "titleLabel": "vehicle-F",
+        "titleId": "0xf1bdef47f2742151a52d38774027d33c57ad17d362202d13412cd870d6c1596f",
+        "stateAfterSeed": "Funded",
+        "refundRequested": true,
+        "refundReason": "Inspection failed: odometer reading does not match the listing",
+        "refundRequestTx": "0x6c87a90bf842b0107cdd69492a37a4c4382fcaf2b5cfb5ddf82934585d93d899",
+        "refundRequestBlock": 47295924
+      }
+    ],
+    "transactions": [
+      {
+        "action": "create decoy DemoStablecoin by buyer",
+        "hash": "0xf829e3465c190427a9b6ec65abb667d6ad4a33c369a644e6d997a411bfa8bfe2",
+        "block": 47295907
+      },
+      {
+        "action": "decoy dUSD.mint(buyer, 18450 dUSD) by buyer",
+        "hash": "0xccf6aae884e83a8175289a04e7de8be01ab5d594ae6b635b79c1ececd08e82f0",
+        "block": 47295908
+      },
+      {
+        "action": "DemoStablecoin.mint(buyer, 79200 dUSD) by deployer",
+        "hash": "0x763f1204604764c45b8e82a81f994ef300ff545a60441ac2ac26b1cb60b560fd",
+        "block": 47295909
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 1 (vehicle-A, guarded) by admin",
+        "hash": "0xd14cc249be3d927a2b740bafb18ee2720f3506e13030d08fa39188a1b313677e",
+        "block": 47295910
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 2 (vehicle-B, guarded) by admin",
+        "hash": "0xb163ecb51ad66ab89763ede4c69c06ad554bf738c173762f2927b704cafdc718",
+        "block": 47295911
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 3 (vehicle-C, legacy) by admin",
+        "hash": "0xaaaba9ac405944992952c214afec35dc8bf22afa7d1c84e09511eb0fecec424e",
+        "block": 47295912
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 4 (vehicle-D, legacy) by admin",
+        "hash": "0x775715b31df5996048e72fc1da5feefc4a028599f8b3fbec66d0043398edb1a7",
+        "block": 47295913
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 5 (vehicle-E, guarded, decoy token) by admin",
+        "hash": "0xf2874eb6ea21db04cdf3dee3ac39e08c7178ff80f694e2d01ff20cc3a3789fdc",
+        "block": 47295914
+      },
+      {
+        "action": "DemoEscrow.createEscrow -> id 6 (vehicle-F, guarded) by admin",
+        "hash": "0x3c40f50422ce484bfd8af28f1875dfc1c43e076626d9609b4d127465a7502f16",
+        "block": 47295915
+      },
+      {
+        "action": "DemoStablecoin.approve(escrow, 79200 dUSD) by buyer",
+        "hash": "0x0d2fcf4f8dbc6251d5234c023679b155818ac6762dc51a04f0d5385c3da00cd1",
+        "block": 47295916
+      },
+      {
+        "action": "decoy dUSD.approve(escrow, 18450 dUSD) by buyer",
+        "hash": "0x16124f985d6ac6d274f8e7a9a8bb7ff190ff4f9d5f084c9c13b1da19c9eb6b5c",
+        "block": 47295917
+      },
+      {
+        "action": "DemoEscrow.fund(1) by buyer",
+        "hash": "0x21f91965a2dda82fac886645cc2131ad4d7d450d970644b0390be4e3ebf34749",
+        "block": 47295918
+      },
+      {
+        "action": "DemoEscrow.fund(2) by buyer",
+        "hash": "0x1f7c269153d1d0162b065f73de0324c89561894efa30cf455051ecf9a607db63",
+        "block": 47295919
+      },
+      {
+        "action": "DemoEscrow.fund(3) by buyer",
+        "hash": "0x303d2edd60fc4234506852f1542fb95b4c02e6c669a3e7e60904daeb9fde203d",
+        "block": 47295920
+      },
+      {
+        "action": "DemoEscrow.fund(4) by buyer",
+        "hash": "0x346398487b968ab1c31182cf4f8cd38327322dfb9c5c4b79c60674c9c93284f8",
+        "block": 47295921
+      },
+      {
+        "action": "DemoEscrow.fund(5) by buyer",
+        "hash": "0x99a5c1821efd9c58e202045028dd8bca7b8b99a6081c0e4bb3bf1fe3938f206a",
+        "block": 47295922
+      },
+      {
+        "action": "DemoEscrow.fund(6) by buyer",
+        "hash": "0x0c7f423e15a38e115650bb947fbd1a7da14155ed71cbe37f18ff72520afc15eb",
+        "block": 47295923
+      },
+      {
+        "action": "DemoEscrow.requestRefund(6) by buyer",
+        "hash": "0x6c87a90bf842b0107cdd69492a37a4c4382fcaf2b5cfb5ddf82934585d93d899",
+        "block": 47295924
+      }
+    ]
+  },
+  "previousDeployments": [
+    {
+      "version": 1,
+      "status": "retired",
+      "record": "deployments/base-sepolia-v1.json",
+      "DemoEscrow": "0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0"
+    }
+  ]
+}
