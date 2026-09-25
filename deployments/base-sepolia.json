@@ -3,6 +3,13 @@
   "chainId": 84532,
   "version": 2,
   "status": "active",
+  "demoModel": {
+    "name": "operator-account",
+    "summary": "The customer (escrow admin) onboards secueji with an operator account. secueji only knows the ABI, the business description and the policies; it releases by sending release(id) from the operator account after its policy allows the request (human review happens in the secueji UI, before anything is sent), and pauses as guardian when monitoring finds a release that did not go through it. No on-chain approver signature is involved.",
+    "since": "2026-09-26",
+    "scenarioSeedCommit": "6169ce5088af8c27e0e07b80fd50703edbb9b1f3",
+    "contractsRedeployed": false
+  },
   "deployedAt": "2026-09-25T18:14:35Z",
   "gitCommit": "edd17521333f8057ff615571593d9c74590f756c",
   "compiler": {
@@ -54,7 +61,9 @@
         "chainId": 84532,
         "verifyingContract": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
         "domainSeparator": "0xa1e97c23c3df9c6b6b5f96998626bbc592ac52c1cdaa3474e54c41738ba66f87"
-      }
+      },
+      "demoPath": false,
+      "note": "Earlier design where the contract enforces platform and approver EIP-712 signatures. Kept deployed and recorded, but no current scenario escrow uses it as oracle."
     }
   },
   "scenarioContracts": {
@@ -75,7 +84,9 @@
     "deployer": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
     "stablecoinMinter": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
     "escrowAdmin": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
-    "escrowGuardian": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
+    "secuejiOperator": "0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5",
+    "escrowGuardian": "0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5",
+    "escrowGuardianPrevious": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
     "guardOwner": "0x65a7ce7F78f2031Bb8b69b602538153aAcBA5F90",
     "platformSigner": "0x0804e7c36F61a416DB3155CdA388760C24DbDefc",
     "approvers": [
@@ -84,7 +95,8 @@
     "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
     "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
     "legacyOracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
-    "decoyTokenMinter": "0x7D6208024d17fbD699dE085e36bEaAD046f86120"
+    "decoyTokenMinter": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+    "note": "secuejiOperator is the oracle of the operator-mode escrows and the escrow guardian (pause only; only the admin can unpause). guardOwner, platformSigner and approvers only apply to GuardExecutor, which is not on the demo path. legacyOracle stands for an old or leaked oracle key outside secueji."
   },
   "deployTransactions": [
     {
@@ -108,202 +120,450 @@
       "block": 47295894
     }
   ],
+  "onboarding": {
+    "script": "script/OnboardOperator.s.sol",
+    "transactions": [
+      {
+        "action": "DemoEscrow.setGuardian(secuejiOperator) by admin",
+        "hash": "0x696a721b3a704181910c0c052d11d2f934a342d8ad47b793abcfbc322460eb64",
+        "block": 47296650
+      },
+      {
+        "action": "transfer 0.01 ETH (gas) deployer -> secuejiOperator",
+        "hash": "0x00835b9576c3c47438fbf83351390e4abf0b79573fafe0883f2114a368d069c2",
+        "block": 47296651
+      }
+    ]
+  },
   "seed": {
     "script": "script/Seed.s.sol",
+    "env": {
+      "TITLE_SUFFIX": "-2",
+      "DECOY_TOKEN_ADDRESS": "0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69"
+    },
+    "note": "No dUSD or decoy dUSD was minted: the refunds of the retired escrows returned exactly the amounts this set needed. titleId = keccak256(titleLabel); each escrowIdsByTitle(titleId) returns only this escrow.",
     "escrows": [
       {
-        "id": 1,
+        "id": 7,
         "scenario": "normal-release",
-        "mode": "guarded",
-        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "expectedDecision": "allow",
+        "trigger": "A release request for vehicle-A-2 pointing at escrow 7: every fact matches, so secueji sends release(7) from the operator account.",
+        "mode": "operator",
+        "oracle": "0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5",
+        "oracleRole": "secuejiOperator",
         "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
         "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
         "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
         "tokenIsDecoy": false,
         "amount": "18450000000",
         "amountDisplay": "18450 dUSD",
-        "titleLabel": "vehicle-A",
-        "titleId": "0x697a7d6c2300463e5ae9ba40b7c86a4015b278472e690488bccc0cf4b63d3025",
+        "titleLabel": "vehicle-A-2",
+        "titleId": "0x2d2b0623b034d5997ea0a31b3bf11f7c24e3b0a7e863fdf58fbc5a112f4150d8",
         "stateAfterSeed": "Funded",
         "refundRequested": false
       },
       {
-        "id": 2,
+        "id": 8,
         "scenario": "payment-mapping",
-        "mode": "guarded",
-        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "expectedDecision": "deny",
+        "trigger": "A release request for vehicle-A-2 that points at escrow 8: its titleId is vehicle-B-2, so it is not vehicle A's payment.",
+        "mode": "operator",
+        "oracle": "0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5",
+        "oracleRole": "secuejiOperator",
         "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
         "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
         "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
         "tokenIsDecoy": false,
         "amount": "21300000000",
         "amountDisplay": "21300 dUSD",
-        "titleLabel": "vehicle-B",
-        "titleId": "0x313db1dcad1cfc44f6420fac6e046c39010b41afa43250d10900260e9fe90b81",
+        "titleLabel": "vehicle-B-2",
+        "titleId": "0xf34b43b234c634d8d072673c49b45bc970e128d509dca5ee66ad01e21c5dd759",
         "stateAfterSeed": "Funded",
         "refundRequested": false
       },
       {
-        "id": 3,
+        "id": 9,
         "scenario": "bypass-release",
+        "expectedDecision": "detect-and-pause",
+        "trigger": "Not a secueji request. The legacy oracle key calls release(9) directly (EscrowReleased caller != secuejiOperator); secueji alerts and pauses as guardian.",
         "mode": "legacy",
         "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+        "oracleRole": "legacyOracle",
         "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
         "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
         "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
         "tokenIsDecoy": false,
         "amount": "12800000000",
         "amountDisplay": "12800 dUSD",
-        "titleLabel": "vehicle-C",
-        "titleId": "0x69b9726beacb9ab4324a45b351d3b7eba11118410a1ffa56bdaca2b838ac44ec",
+        "titleLabel": "vehicle-C-2",
+        "titleId": "0xcdbe5af7be6f24b2e402f333d267144b110e79ab56ac25b2e517d7f8a9ea74ff",
         "stateAfterSeed": "Funded",
         "refundRequested": false
       },
       {
-        "id": 4,
+        "id": 10,
         "scenario": "bypass-release-after-pause",
+        "expectedDecision": "blocked-on-chain",
+        "trigger": "Second bypass attempt by the legacy oracle key after the pause; release(10) reverts with ContractPaused.",
         "mode": "legacy",
         "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+        "oracleRole": "legacyOracle",
         "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
         "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
         "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
         "tokenIsDecoy": false,
         "amount": "9750000000",
         "amountDisplay": "9750 dUSD",
-        "titleLabel": "vehicle-D",
-        "titleId": "0x056dd5b246bc124f228ced3358a78c2cc81b24d72982e56d76b9fb82a45ba0dd",
+        "titleLabel": "vehicle-D-2",
+        "titleId": "0x34c65dd4d1388e18722f902909abd434a13fe290721cb15d0cc8843f6c21f0cb",
         "stateAfterSeed": "Funded",
         "refundRequested": false
       },
       {
-        "id": 5,
+        "id": 11,
         "scenario": "token-mismatch",
-        "mode": "guarded",
-        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "expectedDecision": "deny",
+        "trigger": "A release request for vehicle-E-2: the escrow token is the decoy address, not the configured dUSD, although name and symbol match.",
+        "mode": "operator",
+        "oracle": "0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5",
+        "oracleRole": "secuejiOperator",
         "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
         "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
         "token": "0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69",
         "tokenIsDecoy": true,
         "amount": "18450000000",
         "amountDisplay": "18450 dUSD",
-        "titleLabel": "vehicle-E",
-        "titleId": "0x4c95527ed2e5ece74d6bfa22de52df4193c0a0f74fde1f9cf1117c70aeaaa83f",
+        "titleLabel": "vehicle-E-2",
+        "titleId": "0x501a969693f77f8975c1e0087b5afcd5c6ceb66d76fcba34c333db7b553a8e9b",
         "stateAfterSeed": "Funded",
         "refundRequested": false
       },
       {
-        "id": 6,
+        "id": 12,
         "scenario": "refund-conflict",
-        "mode": "guarded",
-        "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+        "expectedDecision": "review-or-deny",
+        "trigger": "A release request for vehicle-F-2: the buyer requested a refund, so paying the seller conflicts with the dispute.",
+        "mode": "operator",
+        "oracle": "0x90FbD16093440231B0F8eE3b52c0364FF80E6cc5",
+        "oracleRole": "secuejiOperator",
         "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
         "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
         "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
         "tokenIsDecoy": false,
         "amount": "16900000000",
         "amountDisplay": "16900 dUSD",
-        "titleLabel": "vehicle-F",
-        "titleId": "0xf1bdef47f2742151a52d38774027d33c57ad17d362202d13412cd870d6c1596f",
+        "titleLabel": "vehicle-F-2",
+        "titleId": "0xa74ec0814ee6fd3b9f4bd22cf1f2f5f277d2969be3946dad43152c3ab2bf8457",
         "stateAfterSeed": "Funded",
         "refundRequested": true,
         "refundReason": "Inspection failed: odometer reading does not match the listing",
-        "refundRequestTx": "0x6c87a90bf842b0107cdd69492a37a4c4382fcaf2b5cfb5ddf82934585d93d899",
-        "refundRequestBlock": 47295924
+        "refundRequestTx": "0x964d88e9404a0e14407e8b49c18604478afe391c2da8cdc7310c4786b9b02e49",
+        "refundRequestBlock": 47296706
       }
     ],
     "transactions": [
       {
-        "action": "create decoy DemoStablecoin by buyer",
-        "hash": "0xf829e3465c190427a9b6ec65abb667d6ad4a33c369a644e6d997a411bfa8bfe2",
-        "block": 47295907
+        "action": "DemoEscrow.createEscrow -> id 7 (vehicle-A-2, operator) by admin",
+        "hash": "0xdf6d9f69739d81a83efa152fd0e4a72f5321c2f99ba90c2c2ffec1d4e692f0ad",
+        "block": 47296692
       },
       {
-        "action": "decoy dUSD.mint(buyer, 18450 dUSD) by buyer",
-        "hash": "0xccf6aae884e83a8175289a04e7de8be01ab5d594ae6b635b79c1ececd08e82f0",
-        "block": 47295908
+        "action": "DemoEscrow.createEscrow -> id 8 (vehicle-B-2, operator) by admin",
+        "hash": "0x6050a6b39b3920d2fef49f9342a114799db9b273ab37fc69dc6986b0d73f3833",
+        "block": 47296693
       },
       {
-        "action": "DemoStablecoin.mint(buyer, 79200 dUSD) by deployer",
-        "hash": "0x763f1204604764c45b8e82a81f994ef300ff545a60441ac2ac26b1cb60b560fd",
-        "block": 47295909
+        "action": "DemoEscrow.createEscrow -> id 9 (vehicle-C-2, legacy oracle) by admin",
+        "hash": "0x5cd1bbc81ed94191635abee7ddb6b9cc852add8f28c505bcf1fc89cfeb88201f",
+        "block": 47296694
       },
       {
-        "action": "DemoEscrow.createEscrow -> id 1 (vehicle-A, guarded) by admin",
-        "hash": "0xd14cc249be3d927a2b740bafb18ee2720f3506e13030d08fa39188a1b313677e",
-        "block": 47295910
+        "action": "DemoEscrow.createEscrow -> id 10 (vehicle-D-2, legacy oracle) by admin",
+        "hash": "0xdce3e23004c3c0cdf94c0f9d0dd5edaf37f4fde46eca7d1592fbfa834b36c108",
+        "block": 47296695
       },
       {
-        "action": "DemoEscrow.createEscrow -> id 2 (vehicle-B, guarded) by admin",
-        "hash": "0xb163ecb51ad66ab89763ede4c69c06ad554bf738c173762f2927b704cafdc718",
-        "block": 47295911
+        "action": "DemoEscrow.createEscrow -> id 11 (vehicle-E-2, operator, decoy token) by admin",
+        "hash": "0xde36220dcba51dd022b6b7cceba19bd1b5c95221b1b8b472b12d82b51e4eb5bf",
+        "block": 47296696
       },
       {
-        "action": "DemoEscrow.createEscrow -> id 3 (vehicle-C, legacy) by admin",
-        "hash": "0xaaaba9ac405944992952c214afec35dc8bf22afa7d1c84e09511eb0fecec424e",
-        "block": 47295912
-      },
-      {
-        "action": "DemoEscrow.createEscrow -> id 4 (vehicle-D, legacy) by admin",
-        "hash": "0x775715b31df5996048e72fc1da5feefc4a028599f8b3fbec66d0043398edb1a7",
-        "block": 47295913
-      },
-      {
-        "action": "DemoEscrow.createEscrow -> id 5 (vehicle-E, guarded, decoy token) by admin",
-        "hash": "0xf2874eb6ea21db04cdf3dee3ac39e08c7178ff80f694e2d01ff20cc3a3789fdc",
-        "block": 47295914
-      },
-      {
-        "action": "DemoEscrow.createEscrow -> id 6 (vehicle-F, guarded) by admin",
-        "hash": "0x3c40f50422ce484bfd8af28f1875dfc1c43e076626d9609b4d127465a7502f16",
-        "block": 47295915
+        "action": "DemoEscrow.createEscrow -> id 12 (vehicle-F-2, operator) by admin",
+        "hash": "0x0c5d6e16e48a02b2c33a4bda020f91bdf9298139c32b6226359e8a117bdc2fba",
+        "block": 47296697
       },
       {
         "action": "DemoStablecoin.approve(escrow, 79200 dUSD) by buyer",
-        "hash": "0x0d2fcf4f8dbc6251d5234c023679b155818ac6762dc51a04f0d5385c3da00cd1",
-        "block": 47295916
+        "hash": "0xf065b239b58e0f9d10b34e0fee9986dfa58f1c0367f567fff0a68922ffa4dd17",
+        "block": 47296698
       },
       {
         "action": "decoy dUSD.approve(escrow, 18450 dUSD) by buyer",
-        "hash": "0x16124f985d6ac6d274f8e7a9a8bb7ff190ff4f9d5f084c9c13b1da19c9eb6b5c",
-        "block": 47295917
+        "hash": "0x2c0f2b3742079846f4942315754d62616890bf1bcfee96fe2a89f32feb25fc76",
+        "block": 47296699
       },
       {
-        "action": "DemoEscrow.fund(1) by buyer",
-        "hash": "0x21f91965a2dda82fac886645cc2131ad4d7d450d970644b0390be4e3ebf34749",
-        "block": 47295918
+        "action": "DemoEscrow.fund(7) by buyer",
+        "hash": "0xe4e02fcbf518aa81c23f27e8136908bd9f10844c6771b26e50a4e49972ae8172",
+        "block": 47296700
       },
       {
-        "action": "DemoEscrow.fund(2) by buyer",
-        "hash": "0x1f7c269153d1d0162b065f73de0324c89561894efa30cf455051ecf9a607db63",
-        "block": 47295919
+        "action": "DemoEscrow.fund(8) by buyer",
+        "hash": "0x0c7c3c1129a9b9886384983941ee1b6960fe746f5d8c93d5be41ea2c0caad656",
+        "block": 47296701
       },
       {
-        "action": "DemoEscrow.fund(3) by buyer",
-        "hash": "0x303d2edd60fc4234506852f1542fb95b4c02e6c669a3e7e60904daeb9fde203d",
-        "block": 47295920
+        "action": "DemoEscrow.fund(9) by buyer",
+        "hash": "0x40efebff1a640669abfe1010d34f1f08875b17bb6fa20cdb25200dc9e770403d",
+        "block": 47296702
       },
       {
-        "action": "DemoEscrow.fund(4) by buyer",
-        "hash": "0x346398487b968ab1c31182cf4f8cd38327322dfb9c5c4b79c60674c9c93284f8",
-        "block": 47295921
+        "action": "DemoEscrow.fund(10) by buyer",
+        "hash": "0x1b377371f1d5db9cc50880bf4e20ebe65f34164d76d8a2730bd00e59f7b1c870",
+        "block": 47296703
       },
       {
-        "action": "DemoEscrow.fund(5) by buyer",
-        "hash": "0x99a5c1821efd9c58e202045028dd8bca7b8b99a6081c0e4bb3bf1fe3938f206a",
-        "block": 47295922
+        "action": "DemoEscrow.fund(11) by buyer",
+        "hash": "0x706f09a0acd5173980842b739e38dee6468683fcb17be368f55f437191e9820e",
+        "block": 47296704
       },
       {
-        "action": "DemoEscrow.fund(6) by buyer",
-        "hash": "0x0c7f423e15a38e115650bb947fbd1a7da14155ed71cbe37f18ff72520afc15eb",
-        "block": 47295923
+        "action": "DemoEscrow.fund(12) by buyer",
+        "hash": "0xe1d28cb2ecde93692cb88bb45bbc9d43aed977fefb9b21bc881b7c8562505e11",
+        "block": 47296705
       },
       {
-        "action": "DemoEscrow.requestRefund(6) by buyer",
-        "hash": "0x6c87a90bf842b0107cdd69492a37a4c4382fcaf2b5cfb5ddf82934585d93d899",
-        "block": 47295924
+        "action": "DemoEscrow.requestRefund(12) by buyer",
+        "hash": "0x964d88e9404a0e14407e8b49c18604478afe391c2da8cdc7310c4786b9b02e49",
+        "block": 47296706
       }
     ]
   },
+  "retiredSeeds": [
+    {
+      "status": "retired",
+      "reason": "First scenario set of this deployment (GuardExecutor as oracle for the operator-managed escrows, unsuffixed vehicle labels). Replaced by the operator-account set above; every escrow was refunded to the buyer by the admin so it cannot be mistaken for a live scenario.",
+      "gitCommit": "edd17521333f8057ff615571593d9c74590f756c",
+      "retireScript": "script/RetireEscrows.s.sol",
+      "escrows": [
+        {
+          "id": 1,
+          "scenario": "normal-release",
+          "mode": "guarded",
+          "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+          "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+          "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+          "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+          "tokenIsDecoy": false,
+          "amount": "18450000000",
+          "amountDisplay": "18450 dUSD",
+          "titleLabel": "vehicle-A",
+          "titleId": "0x697a7d6c2300463e5ae9ba40b7c86a4015b278472e690488bccc0cf4b63d3025",
+          "stateAfterSeed": "Funded",
+          "refundRequested": false,
+          "status": "retired",
+          "finalState": "Refunded",
+          "retireTx": "0x937d4a85be116bec9067b170faff6b3d27a1e897fdb84bb5cb7ea2c09599e6e4",
+          "retireBlock": 47296668
+        },
+        {
+          "id": 2,
+          "scenario": "payment-mapping",
+          "mode": "guarded",
+          "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+          "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+          "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+          "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+          "tokenIsDecoy": false,
+          "amount": "21300000000",
+          "amountDisplay": "21300 dUSD",
+          "titleLabel": "vehicle-B",
+          "titleId": "0x313db1dcad1cfc44f6420fac6e046c39010b41afa43250d10900260e9fe90b81",
+          "stateAfterSeed": "Funded",
+          "refundRequested": false,
+          "status": "retired",
+          "finalState": "Refunded",
+          "retireTx": "0xd995edf7e8a1033b49256467ef701db65af5541076fa536cd813441f1400fd86",
+          "retireBlock": 47296669
+        },
+        {
+          "id": 3,
+          "scenario": "bypass-release",
+          "mode": "legacy",
+          "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+          "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+          "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+          "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+          "tokenIsDecoy": false,
+          "amount": "12800000000",
+          "amountDisplay": "12800 dUSD",
+          "titleLabel": "vehicle-C",
+          "titleId": "0x69b9726beacb9ab4324a45b351d3b7eba11118410a1ffa56bdaca2b838ac44ec",
+          "stateAfterSeed": "Funded",
+          "refundRequested": false,
+          "status": "retired",
+          "finalState": "Refunded",
+          "retireTx": "0x5c34dfb20ca31cb73af38dc24ea1cbc26def5d560840a7673e0db7291dc2ec0b",
+          "retireBlock": 47296670
+        },
+        {
+          "id": 4,
+          "scenario": "bypass-release-after-pause",
+          "mode": "legacy",
+          "oracle": "0x1CAC9ba3a8DB03076daF6293bc36094079C522Fe",
+          "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+          "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+          "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+          "tokenIsDecoy": false,
+          "amount": "9750000000",
+          "amountDisplay": "9750 dUSD",
+          "titleLabel": "vehicle-D",
+          "titleId": "0x056dd5b246bc124f228ced3358a78c2cc81b24d72982e56d76b9fb82a45ba0dd",
+          "stateAfterSeed": "Funded",
+          "refundRequested": false,
+          "status": "retired",
+          "finalState": "Refunded",
+          "retireTx": "0xc02cd53885c77b53bb297f29baf28e5eec9bf09d97003add81a4a017f9b16f0c",
+          "retireBlock": 47296671
+        },
+        {
+          "id": 5,
+          "scenario": "token-mismatch",
+          "mode": "guarded",
+          "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+          "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+          "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+          "token": "0x0B49f8C8ACA62778c0C0f4BFebB7413e270DFa69",
+          "tokenIsDecoy": true,
+          "amount": "18450000000",
+          "amountDisplay": "18450 dUSD",
+          "titleLabel": "vehicle-E",
+          "titleId": "0x4c95527ed2e5ece74d6bfa22de52df4193c0a0f74fde1f9cf1117c70aeaaa83f",
+          "stateAfterSeed": "Funded",
+          "refundRequested": false,
+          "status": "retired",
+          "finalState": "Refunded",
+          "retireTx": "0x2cb5604738524e569669167c1a9ea94f8827732cc1280cc0a5affbd4510aa31b",
+          "retireBlock": 47296672
+        },
+        {
+          "id": 6,
+          "scenario": "refund-conflict",
+          "mode": "guarded",
+          "oracle": "0x375e5a2A56F1Bc4eE92B6137645661019cac375B",
+          "buyer": "0x7D6208024d17fbD699dE085e36bEaAD046f86120",
+          "seller": "0x007Bfb7f3aaAed103f0e21155814D2Ad0006054d",
+          "token": "0x9A65b88635885Cd4f23d8B4F822eD064c94CbE78",
+          "tokenIsDecoy": false,
+          "amount": "16900000000",
+          "amountDisplay": "16900 dUSD",
+          "titleLabel": "vehicle-F",
+          "titleId": "0xf1bdef47f2742151a52d38774027d33c57ad17d362202d13412cd870d6c1596f",
+          "stateAfterSeed": "Funded",
+          "refundRequested": true,
+          "refundReason": "Inspection failed: odometer reading does not match the listing",
+          "refundRequestTx": "0x6c87a90bf842b0107cdd69492a37a4c4382fcaf2b5cfb5ddf82934585d93d899",
+          "refundRequestBlock": 47295924,
+          "status": "retired",
+          "finalState": "Refunded",
+          "retireTx": "0xd5a6c5981de33eec19b59bc03fa14f4024d866aa7e582cb1908f5f8eaffbd135",
+          "retireBlock": 47296673
+        }
+      ],
+      "transactions": [
+        {
+          "action": "create decoy DemoStablecoin by buyer",
+          "hash": "0xf829e3465c190427a9b6ec65abb667d6ad4a33c369a644e6d997a411bfa8bfe2",
+          "block": 47295907
+        },
+        {
+          "action": "decoy dUSD.mint(buyer, 18450 dUSD) by buyer",
+          "hash": "0xccf6aae884e83a8175289a04e7de8be01ab5d594ae6b635b79c1ececd08e82f0",
+          "block": 47295908
+        },
+        {
+          "action": "DemoStablecoin.mint(buyer, 79200 dUSD) by deployer",
+          "hash": "0x763f1204604764c45b8e82a81f994ef300ff545a60441ac2ac26b1cb60b560fd",
+          "block": 47295909
+        },
+        {
+          "action": "DemoEscrow.createEscrow -> id 1 (vehicle-A, guarded) by admin",
+          "hash": "0xd14cc249be3d927a2b740bafb18ee2720f3506e13030d08fa39188a1b313677e",
+          "block": 47295910
+        },
+        {
+          "action": "DemoEscrow.createEscrow -> id 2 (vehicle-B, guarded) by admin",
+          "hash": "0xb163ecb51ad66ab89763ede4c69c06ad554bf738c173762f2927b704cafdc718",
+          "block": 47295911
+        },
+        {
+          "action": "DemoEscrow.createEscrow -> id 3 (vehicle-C, legacy) by admin",
+          "hash": "0xaaaba9ac405944992952c214afec35dc8bf22afa7d1c84e09511eb0fecec424e",
+          "block": 47295912
+        },
+        {
+          "action": "DemoEscrow.createEscrow -> id 4 (vehicle-D, legacy) by admin",
+          "hash": "0x775715b31df5996048e72fc1da5feefc4a028599f8b3fbec66d0043398edb1a7",
+          "block": 47295913
+        },
+        {
+          "action": "DemoEscrow.createEscrow -> id 5 (vehicle-E, guarded, decoy token) by admin",
+          "hash": "0xf2874eb6ea21db04cdf3dee3ac39e08c7178ff80f694e2d01ff20cc3a3789fdc",
+          "block": 47295914
+        },
+        {
+          "action": "DemoEscrow.createEscrow -> id 6 (vehicle-F, guarded) by admin",
+          "hash": "0x3c40f50422ce484bfd8af28f1875dfc1c43e076626d9609b4d127465a7502f16",
+          "block": 47295915
+        },
+        {
+          "action": "DemoStablecoin.approve(escrow, 79200 dUSD) by buyer",
+          "hash": "0x0d2fcf4f8dbc6251d5234c023679b155818ac6762dc51a04f0d5385c3da00cd1",
+          "block": 47295916
+        },
+        {
+          "action": "decoy dUSD.approve(escrow, 18450 dUSD) by buyer",
+          "hash": "0x16124f985d6ac6d274f8e7a9a8bb7ff190ff4f9d5f084c9c13b1da19c9eb6b5c",
+          "block": 47295917
+        },
+        {
+          "action": "DemoEscrow.fund(1) by buyer",
+          "hash": "0x21f91965a2dda82fac886645cc2131ad4d7d450d970644b0390be4e3ebf34749",
+          "block": 47295918
+        },
+        {
+          "action": "DemoEscrow.fund(2) by buyer",
+          "hash": "0x1f7c269153d1d0162b065f73de0324c89561894efa30cf455051ecf9a607db63",
+          "block": 47295919
+        },
+        {
+          "action": "DemoEscrow.fund(3) by buyer",
+          "hash": "0x303d2edd60fc4234506852f1542fb95b4c02e6c669a3e7e60904daeb9fde203d",
+          "block": 47295920
+        },
+        {
+          "action": "DemoEscrow.fund(4) by buyer",
+          "hash": "0x346398487b968ab1c31182cf4f8cd38327322dfb9c5c4b79c60674c9c93284f8",
+          "block": 47295921
+        },
+        {
+          "action": "DemoEscrow.fund(5) by buyer",
+          "hash": "0x99a5c1821efd9c58e202045028dd8bca7b8b99a6081c0e4bb3bf1fe3938f206a",
+          "block": 47295922
+        },
+        {
+          "action": "DemoEscrow.fund(6) by buyer",
+          "hash": "0x0c7f423e15a38e115650bb947fbd1a7da14155ed71cbe37f18ff72520afc15eb",
+          "block": 47295923
+        },
+        {
+          "action": "DemoEscrow.requestRefund(6) by buyer",
+          "hash": "0x6c87a90bf842b0107cdd69492a37a4c4382fcaf2b5cfb5ddf82934585d93d899",
+          "block": 47295924
+        }
+      ]
+    }
+  ],
   "previousDeployments": [
     {
       "version": 1,
