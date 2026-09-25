@@ -1,0 +1,9 @@
+# Foundry build artifacts
+out/
+cache/
+
+# Broadcast logs (contain deployment details per chain)
+broadcast/
+
+# Local secrets
+.env
