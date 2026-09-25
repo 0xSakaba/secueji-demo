@@ -1,6 +1,11 @@
 {
   "network": "base-sepolia",
   "chainId": 84532,
+  "version": 1,
+  "status": "retired",
+  "retiredAt": "2026-09-25T18:14:35Z",
+  "supersededBy": "deployments/base-sepolia.json",
+  "note": "First demo deployment (no guardian, pause, titleId index or refund request). Kept for history; its escrows 1 and 2 are still funded on-chain but no longer used by the demo.",
   "deployedAt": "2026-09-25T13:03:02Z",
   "gitCommit": "2470061de1e8cf12a896f01114e875bb553cb45e",
   "compiler": {
@@ -17,7 +22,7 @@
     "DemoStablecoin": {
       "address": "0x783BE7bec1a1f1DEFC2fcD77d535E29aBE945200",
       "source": "src/DemoStablecoin.sol",
-      "abi": "deployments/abi/DemoStablecoin.json",
+      "abi": "deployments/abi/v1/DemoStablecoin.json",
       "constructorArgs": [],
       "deployTx": "0xfa420cbc957d8274ed80b8448fb6655be823c403e02098592accf2a618da78eb",
       "block": 47286547,
@@ -27,7 +32,7 @@
     "DemoEscrow": {
       "address": "0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0",
       "source": "src/DemoEscrow.sol",
-      "abi": "deployments/abi/DemoEscrow.json",
+      "abi": "deployments/abi/v1/DemoEscrow.json",
       "constructorArgs": [],
       "deployTx": "0x2d9ed5731de1b1431144efe1e9da0b5669f5e84c8a2c2d349ab4afc76223fe2b",
       "block": 47286548,
@@ -37,7 +42,7 @@
     "GuardExecutor": {
       "address": "0x06F0b593C999e45fB0514584D8C15E17673c09FB",
       "source": "src/GuardExecutor.sol",
-      "abi": "deployments/abi/GuardExecutor.json",
+      "abi": "deployments/abi/v1/GuardExecutor.json",
       "constructorArgs": [
         "0xab5fB13532B38043CDc6bf22D4c9e753d10b73B0",
         "0x0804e7c36F61a416DB3155CdA388760C24DbDefc"
