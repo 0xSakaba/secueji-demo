@@ -9,6 +9,11 @@ pragma solidity ^0.8.28;
 /// per-escrow oracle chosen at creation: an EOA (legacy) or GuardExecutor
 /// (guarded). Terms are immutable after creation, and release is one-shot
 /// (Funded -> Released), so a single escrow can never pay out twice.
+///
+/// Emergency brake: a guardian (or the admin) can pause all releases and
+/// refunds, or a single escrow. Only the admin can lift a pause, so a
+/// compromised or over-eager guardian can stop funds from moving but can never
+/// move them.
 contract DemoEscrow {
     enum State {
         None,
@@ -30,8 +35,14 @@ contract DemoEscrow {
     }
 
     address public immutable admin;
+    /// Account allowed to pause (never to unpause). Defaults to the deployer.
+    address public guardian;
+    /// Global pause: blocks every release and refund.
+    bool public paused;
     uint256 public nextEscrowId = 1;
     mapping(uint256 => Escrow) private _escrows;
+    /// Per-escrow pause: blocks release and refund of that escrow only.
+    mapping(uint256 => bool) public escrowPaused;
 
     event EscrowCreated(
         uint256 indexed escrowId,
@@ -48,16 +59,45 @@ contract DemoEscrow {
     );
     event EscrowRefunded(uint256 indexed escrowId, address indexed buyer, uint256 amount);
     event EscrowCancelled(uint256 indexed escrowId);
+    event GuardianSet(address indexed previousGuardian, address indexed newGuardian);
+    event Paused(address indexed account);
+    event Unpaused(address indexed account);
+    event EscrowPaused(uint256 indexed escrowId, address indexed account);
+    event EscrowUnpaused(uint256 indexed escrowId, address indexed account);
 
     error NotAdmin();
     error NotBuyer();
     error NotOracle();
+    error NotGuardian();
+    error ZeroAddress();
+    error UnknownEscrow(uint256 escrowId);
+    error ContractPaused();
+    error EscrowIsPaused(uint256 escrowId);
     error InvalidTerms();
     error InvalidState(State expected, State actual);
     error TokenTransferFailed();
 
     constructor() {
         admin = msg.sender;
+        guardian = msg.sender;
+        emit GuardianSet(address(0), msg.sender);
+    }
+
+    modifier onlyAdmin() {
+        if (msg.sender != admin) revert NotAdmin();
+        _;
+    }
+
+    modifier onlyGuardianOrAdmin() {
+        if (msg.sender != guardian && msg.sender != admin) revert NotGuardian();
+        _;
+    }
+
+    /// Blocks money-moving calls while the contract or this escrow is paused.
+    modifier whenNotPaused(uint256 escrowId) {
+        if (paused) revert ContractPaused();
+        if (escrowPaused[escrowId]) revert EscrowIsPaused(escrowId);
+        _;
     }
 
     function createEscrow(
@@ -67,8 +107,7 @@ contract DemoEscrow {
         uint256 amount,
         bytes32 titleId,
         address oracle
-    ) external returns (uint256 escrowId) {
-        if (msg.sender != admin) revert NotAdmin();
+    ) external onlyAdmin returns (uint256 escrowId) {
         if (buyer == address(0) || seller == address(0) || token == address(0) || oracle == address(0) || amount == 0)
         {
             revert InvalidTerms();
@@ -88,7 +127,7 @@ contract DemoEscrow {
     }
 
     /// @notice The protected effect. Pays the saved seller the saved amount.
-    function release(uint256 escrowId) external {
+    function release(uint256 escrowId) external whenNotPaused(escrowId) {
         Escrow storage e = _escrows[escrowId];
         if (msg.sender != e.oracle) revert NotOracle();
         _requireState(e, State.Funded);
@@ -97,8 +136,7 @@ contract DemoEscrow {
         emit EscrowReleased(escrowId, e.seller, e.token, e.amount, msg.sender);
     }
 
-    function refund(uint256 escrowId) external {
-        if (msg.sender != admin) revert NotAdmin();
+    function refund(uint256 escrowId) external onlyAdmin whenNotPaused(escrowId) {
         Escrow storage e = _escrows[escrowId];
         _requireState(e, State.Funded);
         e.state = State.Refunded;
@@ -106,13 +144,49 @@ contract DemoEscrow {
         emit EscrowRefunded(escrowId, e.buyer, e.amount);
     }
 
-    function cancel(uint256 escrowId) external {
-        if (msg.sender != admin) revert NotAdmin();
+    function cancel(uint256 escrowId) external onlyAdmin {
         Escrow storage e = _escrows[escrowId];
         _requireState(e, State.Created);
         e.state = State.Cancelled;
         emit EscrowCancelled(escrowId);
     }
+
+    /* ------------------------------------------------------------------ */
+    /* Emergency controls                                                   */
+    /* ------------------------------------------------------------------ */
+
+    function setGuardian(address newGuardian) external onlyAdmin {
+        if (newGuardian == address(0)) revert ZeroAddress();
+        emit GuardianSet(guardian, newGuardian);
+        guardian = newGuardian;
+    }
+
+    /// Stops every release and refund until the admin unpauses.
+    function pause() external onlyGuardianOrAdmin {
+        paused = true;
+        emit Paused(msg.sender);
+    }
+
+    function unpause() external onlyAdmin {
+        paused = false;
+        emit Unpaused(msg.sender);
+    }
+
+    /// Stops release and refund of one escrow until the admin unpauses it.
+    function pauseEscrow(uint256 escrowId) external onlyGuardianOrAdmin {
+        if (_escrows[escrowId].state == State.None) revert UnknownEscrow(escrowId);
+        escrowPaused[escrowId] = true;
+        emit EscrowPaused(escrowId, msg.sender);
+    }
+
+    function unpauseEscrow(uint256 escrowId) external onlyAdmin {
+        escrowPaused[escrowId] = false;
+        emit EscrowUnpaused(escrowId, msg.sender);
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Views                                                                */
+    /* ------------------------------------------------------------------ */
 
     function getEscrow(uint256 escrowId) external view returns (Escrow memory) {
         return _escrows[escrowId];
