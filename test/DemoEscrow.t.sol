@@ -123,6 +123,68 @@ contract DemoEscrowTest is Test {
         assertEq(uint8(escrow.getEscrow(id).state), uint8(DemoEscrow.State.Cancelled));
     }
 
+    /* ---------------------------------------------------------------- */
+    /* Refund request                                                    */
+    /* ---------------------------------------------------------------- */
+
+    function test_buyerRequestsRefund() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.warp(1_700_000_000);
+        vm.expectEmit(true, true, true, true, address(escrow));
+        emit DemoEscrow.RefundRequested(id, TITLE, buyer, "inspection failed");
+        vm.prank(buyer);
+        escrow.requestRefund(id, "inspection failed");
+        assertEq(escrow.refundRequestedAt(id), 1_700_000_000);
+        assertTrue(escrow.isRefundRequested(id));
+        assertEq(uint8(escrow.getEscrow(id).state), uint8(DemoEscrow.State.Funded), "state changed");
+    }
+
+    function test_onlyBuyerRequestsRefund() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.prank(seller);
+        vm.expectRevert(DemoEscrow.NotBuyer.selector);
+        escrow.requestRefund(id, "not mine");
+        assertFalse(escrow.isRefundRequested(id));
+    }
+
+    function test_refundRequestNeedsFundedEscrow() public {
+        uint256 id = escrow.createEscrow(buyer, seller, address(token), AMOUNT, TITLE, legacyOracle);
+        vm.prank(buyer);
+        vm.expectRevert(
+            abi.encodeWithSelector(DemoEscrow.InvalidState.selector, DemoEscrow.State.Funded, DemoEscrow.State.Created)
+        );
+        escrow.requestRefund(id, "too early");
+    }
+
+    function test_refundRequestIsOneShot() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.prank(buyer);
+        escrow.requestRefund(id, "first");
+        vm.prank(buyer);
+        vm.expectRevert(abi.encodeWithSelector(DemoEscrow.RefundAlreadyRequested.selector, id));
+        escrow.requestRefund(id, "second");
+    }
+
+    /// Demo design: the request is a flag for the policy, not an on-chain block.
+    /// A release still goes through, which is what the platform must catch.
+    function test_refundRequestDoesNotBlockRelease() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.prank(buyer);
+        escrow.requestRefund(id, "inspection failed");
+        vm.prank(legacyOracle);
+        escrow.release(id);
+        assertEq(token.balanceOf(seller), AMOUNT);
+    }
+
+    function test_adminRefundsAfterRequest() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.prank(buyer);
+        escrow.requestRefund(id, "inspection failed");
+        uint256 before = token.balanceOf(buyer);
+        escrow.refund(id);
+        assertEq(token.balanceOf(buyer), before + AMOUNT);
+    }
+
     function _createFunded(address oracle) internal returns (uint256 id) {
         id = escrow.createEscrow(buyer, seller, address(token), AMOUNT, TITLE, oracle);
         vm.prank(buyer);

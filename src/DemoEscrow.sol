@@ -44,6 +44,8 @@ contract DemoEscrow {
     /// Per-escrow pause: blocks release and refund of that escrow only.
     mapping(uint256 => bool) public escrowPaused;
     mapping(bytes32 => uint256[]) private _escrowsByTitle;
+    /// When the buyer asked for a refund (block timestamp), 0 if never.
+    mapping(uint256 => uint256) public refundRequestedAt;
 
     /// `titleId` is the vehicle / order id; it is indexed so every escrow of one
     /// title can be found from logs (see also `escrowIdsByTitle`).
@@ -62,6 +64,7 @@ contract DemoEscrow {
     );
     event EscrowRefunded(uint256 indexed escrowId, address indexed buyer, uint256 amount);
     event EscrowCancelled(uint256 indexed escrowId);
+    event RefundRequested(uint256 indexed escrowId, bytes32 indexed titleId, address indexed buyer, string reason);
     event GuardianSet(address indexed previousGuardian, address indexed newGuardian);
     event Paused(address indexed account);
     event Unpaused(address indexed account);
@@ -76,6 +79,7 @@ contract DemoEscrow {
     error UnknownEscrow(uint256 escrowId);
     error ContractPaused();
     error EscrowIsPaused(uint256 escrowId);
+    error RefundAlreadyRequested(uint256 escrowId);
     error InvalidTerms();
     error InvalidState(State expected, State actual);
     error TokenTransferFailed();
@@ -140,6 +144,21 @@ contract DemoEscrow {
         emit EscrowReleased(escrowId, e.seller, e.token, e.amount, msg.sender);
     }
 
+    /// Buyer flags a funded escrow as disputed ("please refund, the car failed
+    /// inspection"). Demo design: this only records the request and emits an
+    /// event. It deliberately does NOT block `release`, so the conflict between
+    /// a pending refund request and a release is left to the off-chain policy
+    /// that authorizes guarded releases. A production escrow would likely
+    /// enforce it on-chain as well.
+    function requestRefund(uint256 escrowId, string calldata reason) external {
+        Escrow storage e = _escrows[escrowId];
+        _requireState(e, State.Funded);
+        if (msg.sender != e.buyer) revert NotBuyer();
+        if (refundRequestedAt[escrowId] != 0) revert RefundAlreadyRequested(escrowId);
+        refundRequestedAt[escrowId] = block.timestamp;
+        emit RefundRequested(escrowId, e.titleId, msg.sender, reason);
+    }
+
     function refund(uint256 escrowId) external onlyAdmin whenNotPaused(escrowId) {
         Escrow storage e = _escrows[escrowId];
         _requireState(e, State.Funded);
@@ -194,6 +213,10 @@ contract DemoEscrow {
 
     function getEscrow(uint256 escrowId) external view returns (Escrow memory) {
         return _escrows[escrowId];
+    }
+
+    function isRefundRequested(uint256 escrowId) external view returns (bool) {
+        return refundRequestedAt[escrowId] != 0;
     }
 
     /// Every escrow created for `titleId`, oldest first, whatever its state.
