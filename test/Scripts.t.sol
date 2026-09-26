@@ -14,6 +14,7 @@ import {BypassRelease} from "../script/scenarios/BypassRelease.s.sol";
 import {GuardianPause} from "../script/scenarios/GuardianPause.s.sol";
 import {AdminUnpause} from "../script/scenarios/AdminUnpause.s.sol";
 import {InspectIntercepta} from "../script/InspectIntercepta.s.sol";
+import {PrepareRiskyApproval} from "../script/PrepareRiskyApproval.s.sol";
 
 /// Runs the deployment, onboarding, seed and scenario scripts end to end, the
 /// same order as the Base Sepolia re-seed: seed, retire the old set, seed again
@@ -132,6 +133,14 @@ contract ScriptsTest is NetworkSafetyChecks {
         assertEq(inspection.from, operator);
         assertTrue(inspection.refundRequested);
         assertEq(uint8(_state(escrow, 12)), uint8(DemoEscrow.State.Funded));
+        vm.setEnv("APPROVAL_OWNER_ADDRESS", vm.toString(operator));
+        vm.setEnv("RISKY_SPENDER_ADDRESS", vm.toString(legacyOracle));
+        // legacyOracle 只作離線參數測試，絕不宣稱它已被 provider 標為惡意。
+        PrepareRiskyApproval.Request memory approval = new PrepareRiskyApproval().run();
+        assertEq(approval.from, operator);
+        assertEq(approval.to, address(token));
+        assertEq(approval.data, abi.encodeWithSignature("approve(address,uint256)", legacyOracle, type(uint256).max));
+        assertEq(token.allowance(operator, legacyOracle), 0);
         _key("DEPLOYER_PRIVATE_KEY", DEPLOYER_PK);
         _key("BUYER_PRIVATE_KEY", BUYER_PK);
         _key("OPERATOR_PRIVATE_KEY", OPERATOR_PK);

@@ -14,6 +14,9 @@ mainnet demo is supported by the scripts, but is **not deployed or live-verified
 Mainnet gas and operator top-ups cost real ETH. See the
 [Base mainnet preparation guide](docs/base-mainnet-demo.md) and
 [Intercepta scenarios](docs/intercepta-scenarios.md).
+For the deployment teammate, use the [Base handoff checklist](docs/deployment-handoff-base.md).
+The selected Intercepta demo prepares an **unsigned risky approval** using
+`PrepareRiskyApproval.s.sol`; never sign or broadcast that approval.
 
 ## How the demo uses secueji
 

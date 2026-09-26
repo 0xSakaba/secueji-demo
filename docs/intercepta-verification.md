@@ -2,7 +2,7 @@
 
 ## 已執行（本機）
 
-- `forge test --offline --summary`：67 passed、0 failed；含 2 個 fuzz tests（各 256 runs）。
+- `forge test --offline --summary`：71 passed、0 failed；含 2 個 fuzz tests（各 256 runs）。
 - `ScriptsTest` 單一測試內依序執行網路拒絕檢查，及 chain id 31337／84532／8453 的本機 EVM 流程。
   這些是本機模擬，不是對該網路 RPC 的測試。
 - `InterceptaInspectionTest`：未簽名 release 參數、退款／暫停狀態、不存在 escrow 拒絕；
@@ -11,7 +11,9 @@
   unchecked-transfer lint 警告保留，不等於合約安全審計通過。
 - `forge fmt --check script test/NetworkSafety.t.sol test/Scripts.t.sol test/InterceptaInspection.t.sol`：通過。
 - 全 repo `forge fmt --check`：既有 `src/DemoEscrow.sol`、`src/GuardExecutor.sol` 格式差異；未修改這兩份合約。
-- 兩份新增 JSON 可解析，9 個 scenario id 不重複，主網紀錄樣板為 `NOT_DEPLOYED`。
+- `RiskyApprovalTest`：最大授權 calldata、零地址與不存在 token 拒絕，且 allowance／餘額不變。
+  ScriptsTest 額外以私鑰空白執行 `PrepareRiskyApproval.run()`，證明唯讀入口不需要簽名。
+- 兩份新增 JSON 可解析，10 個 scenario id 不重複，主網紀錄樣板為 `NOT_DEPLOYED`。
 - `git diff --check`：通過；`.env.base-mainnet` 被 gitignore 排除。
 
 工具：Forge 1.7.1、Solidity 0.8.28、forge-std v1.16.2（既有 submodule revision 未更動）。

@@ -8,6 +8,14 @@
   },
   "cases": [
     {
+      "id": "OP-RISKY-APPROVAL", "entry": "OPERATION", "source": "LIVE_CANDIDATE",
+      "request": "UNSIGNED_TRANSACTION", "chainId": 8453,
+      "preparationScript": "script/PrepareRiskyApproval.s.sol",
+      "broadcastAllowed": false,
+      "expectedProvider": "REQUIRE_ACTUAL_RISK_SIGNAL_BEFORE_DEMO_CLAIM",
+      "expectedPlatform": "SHOW_PROVIDER_RISK_AGENT_EXPLANATION_AND_POLICY_SEPARATELY"
+    },
+    {
       "id": "OP-CLEAN", "entry": "OPERATION", "source": "LIVE_CANDIDATE",
       "seedLabel": "vehicle-A", "request": "UNSIGNED_TRANSACTION",
       "expectedProvider": "OBSERVE_ACTUAL_RESPONSE",

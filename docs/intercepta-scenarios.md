@@ -1,5 +1,23 @@
 # Intercepta demo 測試指南
 
+## 本次主展示案例：高風險 token 授權
+
+選定 `OP-RISKY-APPROVAL`，以 Base 主網 demo token 的未簽名
+`approve(candidateSpender, uint256.max)` 作分析，不實際授權。
+官方「Risky token approvals」涵蓋對惡意／遭入侵 dApp 的授權；
+**無限授權本身、其他來源的黑名單或本機測試通過，都不等於 Intercepta 已命中。**
+候選 spender 必須經真實 API 回應確認，未確認前保持候選身分。
+
+部署交接見 [給同事的指南](deployment-handoff-base.md)。部署完成並取得地址後設定
+`TOKEN_ADDRESS`、`APPROVAL_OWNER_ADDRESS`（平台 operator）、`RISKY_SPENDER_ADDRESS`，執行：
+
+```sh
+forge script script/PrepareRiskyApproval.s.sol --rpc-url "$ETH_RPC_URL"
+```
+
+不加 `--broadcast`，也不把輸出貼進錢包簽署。輸出只交給 server-side Intercepta client。
+API 的 `value` 使用 `0x0`，不是轉移 ETH。主網 api key 權限、索引、真實命中仍待實測。
+
 這份文件是測試規劃，**不是已取得的 Intercepta 結果**。
 機器可讀情境在 [`fixtures/intercepta/scenarios.json`](../fixtures/intercepta/scenarios.json)。
 `LIVE_CANDIDATE` 表示部署後可送真實查詢，不表示已執行或一定有警告。
