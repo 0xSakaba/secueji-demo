@@ -124,6 +124,53 @@ contract DemoEscrowTest is Test {
     }
 
     /* ---------------------------------------------------------------- */
+    /* Seller update                                                     */
+    /* ---------------------------------------------------------------- */
+
+    function test_adminUpdatesSeller() public {
+        uint256 id = _createFunded(legacyOracle);
+        address newSeller = makeAddr("newSeller");
+        vm.expectEmit(true, true, true, true, address(escrow));
+        emit DemoEscrow.SellerUpdated(id, newSeller);
+        escrow.updateSeller(id, newSeller);
+        assertEq(escrow.getEscrow(id).seller, newSeller);
+    }
+
+    function test_onlyAdminUpdatesSeller() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.prank(stranger);
+        vm.expectRevert(DemoEscrow.NotAdmin.selector);
+        escrow.updateSeller(id, stranger);
+        assertEq(escrow.getEscrow(id).seller, seller);
+    }
+
+    function test_updateSellerRejectsZeroAddress() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.expectRevert(DemoEscrow.ZeroAddress.selector);
+        escrow.updateSeller(id, address(0));
+    }
+
+    function test_updateSellerNeedsFundedEscrow() public {
+        uint256 id = _createFunded(legacyOracle);
+        vm.prank(legacyOracle);
+        escrow.release(id);
+        vm.expectRevert(
+            abi.encodeWithSelector(DemoEscrow.InvalidState.selector, DemoEscrow.State.Funded, DemoEscrow.State.Released)
+        );
+        escrow.updateSeller(id, makeAddr("newSeller"));
+    }
+
+    function test_releasePaysUpdatedSeller() public {
+        uint256 id = _createFunded(legacyOracle);
+        address newSeller = makeAddr("newSeller");
+        escrow.updateSeller(id, newSeller);
+        vm.prank(legacyOracle);
+        escrow.release(id);
+        assertEq(token.balanceOf(newSeller), AMOUNT);
+        assertEq(token.balanceOf(seller), 0);
+    }
+
+    /* ---------------------------------------------------------------- */
     /* Refund request                                                    */
     /* ---------------------------------------------------------------- */
 

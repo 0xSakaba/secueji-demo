@@ -64,6 +64,7 @@ contract DemoEscrow {
     );
     event EscrowRefunded(uint256 indexed escrowId, address indexed buyer, uint256 amount);
     event EscrowCancelled(uint256 indexed escrowId);
+    event SellerUpdated(uint256 indexed escrowId, address newSeller);
     event RefundRequested(uint256 indexed escrowId, bytes32 indexed titleId, address indexed buyer, string reason);
     event GuardianSet(address indexed previousGuardian, address indexed newGuardian);
     event Paused(address indexed account);
@@ -172,6 +173,16 @@ contract DemoEscrow {
         _requireState(e, State.Created);
         e.state = State.Cancelled;
         emit EscrowCancelled(escrowId);
+    }
+
+    /// @notice Corrects the payout address of a funded escrow, for example when
+    /// the seller moves to a new wallet after the listing was created.
+    function updateSeller(uint256 escrowId, address newSeller) external onlyAdmin {
+        if (newSeller == address(0)) revert ZeroAddress();
+        Escrow storage e = _escrows[escrowId];
+        _requireState(e, State.Funded);
+        e.seller = newSeller;
+        emit SellerUpdated(escrowId, newSeller);
     }
 
     /* ------------------------------------------------------------------ */
