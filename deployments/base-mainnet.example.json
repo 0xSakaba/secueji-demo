@@ -1,0 +1,26 @@
+{
+  "status": "NOT_DEPLOYED",
+  "chainId": 8453,
+  "network": "Base mainnet",
+  "mockAssetsOnly": true,
+  "contracts": {
+    "DemoStablecoin": null,
+    "DemoEscrow": null,
+    "decoyDemoStablecoin": null
+  },
+  "roles": {
+    "admin": null,
+    "operator": null,
+    "buyer": null,
+    "seller": null,
+    "legacyOracle": null
+  },
+  "transactions": [],
+  "scenarios": [],
+  "sourceCommit": null,
+  "verification": {
+    "contractSources": "NOT_VERIFIED",
+    "interceptaLive": "NOT_RUN",
+    "secuejiEndToEnd": "NOT_RUN"
+  }
+}

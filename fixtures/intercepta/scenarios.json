@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "kind": "TEST_PLAN_NOT_RESULTS",
+  "networks": {
+    "base": { "chainId": 8453, "transactionScanDocumented": true, "deployed": false },
+    "baseSepolia": { "chainId": 84532, "transactionScanDocumented": false },
+    "anvil": { "chainId": 31337, "transactionScanDocumented": false }
+  },
+  "cases": [
+    {
+      "id": "OP-CLEAN", "entry": "OPERATION", "source": "LIVE_CANDIDATE",
+      "seedLabel": "vehicle-A", "request": "UNSIGNED_TRANSACTION",
+      "expectedProvider": "OBSERVE_ACTUAL_RESPONSE",
+      "expectedPlatform": "EVALUATE_RULES_AND_AGENT_NOT_PROVIDER_ALONE"
+    },
+    {
+      "id": "OP-TOKEN-MISMATCH", "entry": "OPERATION", "source": "LIVE_CANDIDATE",
+      "seedLabel": "vehicle-E", "request": "UNSIGNED_TRANSACTION",
+      "expectedProvider": "OBSERVE_ACTUAL_RESPONSE",
+      "expectedPlatform": "TOKEN_ADDRESS_POLICY_REJECTS_EVEN_WITH_NO_PROVIDER_SIGNAL"
+    },
+    {
+      "id": "OP-REFUND-CONFLICT", "entry": "OPERATION", "source": "LIVE_CANDIDATE",
+      "seedLabel": "vehicle-F", "request": "UNSIGNED_TRANSACTION",
+      "expectedProvider": "OBSERVE_ACTUAL_RESPONSE",
+      "expectedPlatform": "REFUND_POLICY_REQUIRES_REVIEW_OR_DENY"
+    },
+    {
+      "id": "CHAIN-BYPASS", "entry": "CHAIN_ACTIVITY", "source": "LIVE_CANDIDATE",
+      "seedLabel": "vehicle-C", "request": "TRANSACTION_HASH",
+      "expectedProvider": "OBSERVE_ACTUAL_RESPONSE",
+      "expectedPlatform": "DETECT_BYPASS_USING_CALLER_AND_OPERATION_HISTORY"
+    },
+    {
+      "id": "OP-RISK", "entry": "OPERATION", "source": "SYNTHETIC",
+      "seedLabel": "vehicle-A", "request": "UNSIGNED_TRANSACTION",
+      "expectedProvider": "INJECT_RISK_ONLY_IN_TEST_ADAPTER",
+      "expectedPlatform": "REQUIRE_MODE_CANNOT_AUTO_ALLOW"
+    },
+    {
+      "id": "CHAIN-RISK", "entry": "CHAIN_ACTIVITY", "source": "SYNTHETIC",
+      "seedLabel": "vehicle-C", "request": "TRANSACTION_HASH",
+      "expectedProvider": "INJECT_RISK_ONLY_IN_TEST_ADAPTER",
+      "expectedPlatform": "PERSIST_WARNING_SEPARATELY_FROM_AGENT_AND_DECISION"
+    },
+    {
+      "id": "OP-STALE", "entry": "OPERATION", "source": "SYNTHETIC",
+      "seedLabel": "vehicle-A", "request": "UNSIGNED_TRANSACTION",
+      "expectedProvider": "INJECT_EXPIRED_EVIDENCE_ONLY_IN_TEST_ADAPTER",
+      "expectedPlatform": "REQUIRE_MODE_REEVALUATES_BEFORE_NEW_EXECUTION"
+    },
+    {
+      "id": "PROVIDER-FAILURE", "entry": "OPERATION", "source": "SYNTHETIC",
+      "seedLabel": "vehicle-A", "request": "UNSIGNED_TRANSACTION",
+      "expectedProvider": "INJECT_TIMEOUT_429_502_OR_MALFORMED_RESPONSE",
+      "expectedPlatform": "REQUIRE_MODE_INCOMPLETE_NOT_SAFE"
+    },
+    {
+      "id": "UNSUPPORTED-NETWORK", "entry": "CHAIN_ACTIVITY", "source": "CAPABILITY_CHECK",
+      "seedLabel": "vehicle-C", "request": "TRANSACTION_HASH",
+      "expectedProvider": "NO_API_CALL_FOR_84532_OR_31337",
+      "expectedPlatform": "UNSUPPORTED_IS_NOT_NO_RISK"
+    }
+  ]
+}

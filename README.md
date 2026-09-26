@@ -8,7 +8,12 @@ The demo story is a used-car escrow marketplace: a buyer deposits dUSD into an
 escrow, the marketplace checks payment and the vehicle inspection, and an
 operator then releases the funds to the seller. `titleId` is the vehicle id.
 
-Not audited. Mock funds only. Deploy only to local chains and testnets.
+Not audited. Mock assets only; never deposit real stablecoins or customer funds.
+Local chains and Base Sepolia are the default. An explicitly opted-in Base
+mainnet demo is supported by the scripts, but is **not deployed or live-verified**.
+Mainnet gas and operator top-ups cost real ETH. See the
+[Base mainnet preparation guide](docs/base-mainnet-demo.md) and
+[Intercepta scenarios](docs/intercepta-scenarios.md).
 
 ## How the demo uses secueji
 
@@ -145,6 +150,8 @@ forge test          # add -vvv for traces
 | `test/DemoEscrowPause.t.sol` | Guardian role, global and per-escrow pause, who can pause and unpause (fuzz), events, pause blocks legacy release, guarded release and refund |
 | `test/OperatorModel.t.sol` | Operator releases only its own escrows, has no admin powers, pauses as guardian after a bypass, is itself stopped by a pause until the admin unpauses, is not blocked on-chain by a refund request |
 | `test/Scripts.t.sol` | Deploy, OnboardOperator, Seed, RetireEscrows and the scenario scripts end to end (the same sequence as the Base Sepolia re-seed) |
+| `test/NetworkSafety.t.sol` | Safety checks invoked serially by ScriptsTest: wrong chain, mainnet opt-in, unsupported chain and explicit mainnet gas target |
+| `test/InterceptaInspection.t.sol` | Read-only unsigned transaction preparation, no token movement, refund/pause context and nonexistent escrow rejection |
 | `test/GuardExecutor.t.sol` | Earlier design: valid guarded release, missing/foreign approval, oracle EOA bypass, terms mismatches, nonce replay, expired intent/authorization, mismatched or forged authorization, wrong escrow contract |
 
 Test names carry scenario (`S-xxx`) and acceptance-criterion (`AC-xxx`) IDs
@@ -463,6 +470,10 @@ unpaused. Then update `deployments/base-sepolia.json`.
    testnets. Set the operator and scenario variables as for anvil. Set
    `PLATFORM_SIGNER_ADDRESS` (and `APPROVER_ADDRESS`) only if you also want
    GuardExecutor.
+   Set `EXPECTED_CHAIN_ID=84532` for Base Sepolia and keep
+   `ALLOW_BASE_MAINNET=false`. Scripts reject a mismatched RPC chain before
+   reading signing keys. Do not use this testnet procedure for mainnet;
+   use the [separate checklist](docs/base-mainnet-demo.md).
 2. Deploy, then onboard and seed as described for anvil (add `--slow`):
 
    ```sh
