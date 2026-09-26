@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {console2} from "forge-std/Script.sol";
+import {DemoScript} from "../DemoScript.sol";
 import {DemoEscrow} from "../../src/DemoEscrow.sol";
 
 /// @notice Demo trigger for the "bypass release" scenario. An account that is
@@ -20,8 +21,9 @@ import {DemoEscrow} from "../../src/DemoEscrow.sol";
 ///   LEGACY_ORACLE_PRIVATE_KEY  key of the old oracle EOA
 ///   ESCROW_ADDRESS             DemoEscrow
 ///   ESCROW_ID                  escrow whose oracle is that EOA (vehicle-C / vehicle-D)
-contract BypassRelease is Script {
+contract BypassRelease is DemoScript {
     function run() external {
+        _checkNetwork();
         uint256 oracleKey = vm.envUint("LEGACY_ORACLE_PRIVATE_KEY");
         DemoEscrow escrow = DemoEscrow(vm.envAddress("ESCROW_ADDRESS"));
         uint256 id = vm.envUint("ESCROW_ID");

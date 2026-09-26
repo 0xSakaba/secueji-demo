@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {console2} from "forge-std/Script.sol";
+import {DemoScript} from "./DemoScript.sol";
 import {DemoEscrow} from "../src/DemoEscrow.sol";
 
 /// @notice Takes old demo escrows out of play so they cannot be confused with
@@ -15,8 +16,9 @@ import {DemoEscrow} from "../src/DemoEscrow.sol";
 ///   DEPLOYER_PRIVATE_KEY  escrow admin
 ///   ESCROW_ADDRESS        DemoEscrow
 ///   ESCROW_IDS            comma-separated ids, for example 1,2,3,4,5,6
-contract RetireEscrows is Script {
+contract RetireEscrows is DemoScript {
     function run() external {
+        _checkNetwork();
         uint256 adminKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         DemoEscrow escrow = DemoEscrow(vm.envAddress("ESCROW_ADDRESS"));
         uint256[] memory ids = vm.envUint("ESCROW_IDS", ",");

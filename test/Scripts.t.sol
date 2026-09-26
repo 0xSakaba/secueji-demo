@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/Test.sol";
+import {NetworkSafetyChecks} from "./NetworkSafety.t.sol";
 import {DemoStablecoin} from "../src/DemoStablecoin.sol";
 import {DemoEscrow} from "../src/DemoEscrow.sol";
 import {GuardExecutor} from "../src/GuardExecutor.sol";
@@ -13,6 +13,7 @@ import {OperatorRelease} from "../script/scenarios/OperatorRelease.s.sol";
 import {BypassRelease} from "../script/scenarios/BypassRelease.s.sol";
 import {GuardianPause} from "../script/scenarios/GuardianPause.s.sol";
 import {AdminUnpause} from "../script/scenarios/AdminUnpause.s.sol";
+import {InspectIntercepta} from "../script/InspectIntercepta.s.sol";
 
 /// Runs the deployment, onboarding, seed and scenario scripts end to end, the
 /// same order as the Base Sepolia re-seed: seed, retire the old set, seed again
@@ -21,7 +22,7 @@ import {AdminUnpause} from "../script/scenarios/AdminUnpause.s.sol";
 /// Every variable a script reads is set here, because forge also loads the
 /// project's `.env` and its values must not leak into the test. One test
 /// function only, since the environment is shared by the whole process.
-contract ScriptsTest is Test {
+contract ScriptsTest is NetworkSafetyChecks {
     uint256 constant DEPLOYER_PK = 0xD3910;
     uint256 constant BUYER_PK = 0xB0E3;
     uint256 constant OPERATOR_PK = 0x0E3A;
@@ -44,24 +45,37 @@ contract ScriptsTest is Test {
     }
 
     function test_fullDemoFlow() public {
+        // 環境變數是整個 Forge 程序共用；所有腳本情境集中在此依序執行。
+        _checkNetworkSafety();
+        _fullDemoFlow(31337, 0.01 ether);
+        _fullDemoFlow(84532, 0.01 ether);
+        _fullDemoFlow(8453, 0);
+    }
+
+    function _fullDemoFlow(uint256 chainId, uint256 gasTarget) internal {
+        // 僅在本機 EVM 模擬不同 chain id，沒有 RPC、主網交易或真實資金。
+        vm.chainId(chainId);
+        vm.setEnv("EXPECTED_CHAIN_ID", vm.toString(chainId));
+        vm.setEnv("ALLOW_BASE_MAINNET", chainId == 8453 ? "true" : "false");
+        vm.deal(operator, 0);
         vm.deal(deployer, 1 ether);
         _key("DEPLOYER_PRIVATE_KEY", DEPLOYER_PK);
         _key("BUYER_PRIVATE_KEY", BUYER_PK);
         _key("OPERATOR_PRIVATE_KEY", OPERATOR_PK);
         _key("LEGACY_ORACLE_PRIVATE_KEY", LEGACY_PK);
-        vm.setEnv("GUARDIAN_ADDRESS", vm.toString(deployer));
-        vm.setEnv("PLATFORM_SIGNER_ADDRESS", vm.toString(platformSigner));
-        vm.setEnv("APPROVER_ADDRESS", vm.toString(ZERO));
+        vm.setEnv("GUARDIAN_ADDRESS", chainId == 8453 ? "" : vm.toString(deployer));
+        vm.setEnv("PLATFORM_SIGNER_ADDRESS", chainId == 8453 ? "" : vm.toString(platformSigner));
+        vm.setEnv("APPROVER_ADDRESS", chainId == 8453 ? "" : vm.toString(ZERO));
         vm.setEnv("SELLER_ADDRESS", vm.toString(seller));
         vm.setEnv("OPERATOR_ADDRESS", vm.toString(operator));
         vm.setEnv("LEGACY_ORACLE_ADDRESS", vm.toString(legacyOracle));
-        vm.setEnv("OPERATOR_GAS_WEI", vm.toString(uint256(0.01 ether)));
+        vm.setEnv("OPERATOR_GAS_WEI", vm.toString(gasTarget));
 
-        // Deploy: GuardExecutor only because a platform signer is configured.
+        // 主網樣板的 optional 欄位留白；不能因 source 後變成空字串而壞掉。
         (DemoStablecoin token, DemoEscrow escrow, GuardExecutor guard) = new Deploy().run();
         assertEq(escrow.admin(), deployer);
         assertEq(escrow.guardian(), deployer);
-        assertTrue(address(guard) != ZERO);
+        assertEq(address(guard) == ZERO, chainId == 8453);
         vm.setEnv("TOKEN_ADDRESS", vm.toString(address(token)));
         vm.setEnv("ESCROW_ADDRESS", vm.toString(address(escrow)));
 
@@ -70,12 +84,12 @@ contract ScriptsTest is Test {
         onboard.run();
         onboard.run();
         assertEq(escrow.guardian(), operator);
-        assertEq(operator.balance, 0.01 ether);
+        assertEq(operator.balance, gasTarget);
         assertEq(escrow.admin(), deployer);
 
         // First seed: plain labels, new decoy token.
         vm.setEnv("TITLE_SUFFIX", "");
-        vm.setEnv("DECOY_TOKEN_ADDRESS", vm.toString(ZERO));
+        vm.setEnv("DECOY_TOKEN_ADDRESS", chainId == 8453 ? "" : vm.toString(ZERO));
         (uint256[] memory first, DemoStablecoin decoy) = new Seed().run();
         assertEq(first[0], 1);
         assertEq(decoy.minter(), buyer);
@@ -106,6 +120,22 @@ contract ScriptsTest is Test {
         assertEq(escrow.getEscrow(11).token, address(decoy));
         assertTrue(escrow.isRefundRequested(12));
         assertFalse(escrow.isRefundRequested(7));
+
+        // 真正執行唯讀入口：即使所有私鑰為空，也能準備 unsigned 參數。
+        vm.setEnv("ESCROW_ID", "12");
+        vm.setEnv("DEPLOYER_PRIVATE_KEY", "");
+        vm.setEnv("BUYER_PRIVATE_KEY", "");
+        vm.setEnv("OPERATOR_PRIVATE_KEY", "");
+        vm.setEnv("LEGACY_ORACLE_PRIVATE_KEY", "");
+        InspectIntercepta.Inspection memory inspection = new InspectIntercepta().run();
+        assertEq(inspection.chainId, chainId);
+        assertEq(inspection.from, operator);
+        assertTrue(inspection.refundRequested);
+        assertEq(uint8(_state(escrow, 12)), uint8(DemoEscrow.State.Funded));
+        _key("DEPLOYER_PRIVATE_KEY", DEPLOYER_PK);
+        _key("BUYER_PRIVATE_KEY", BUYER_PK);
+        _key("OPERATOR_PRIVATE_KEY", OPERATOR_PK);
+        _key("LEGACY_ORACLE_PRIVATE_KEY", LEGACY_PK);
 
         // vehicle-A: operator release after secueji allowed it.
         vm.setEnv("ESCROW_ID", "7");

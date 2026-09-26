@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {console2} from "forge-std/Script.sol";
+import {DemoScript} from "./DemoScript.sol";
 import {DemoEscrow} from "../src/DemoEscrow.sol";
 
 /// @notice Onboarding step of the customer (the escrow admin) to secueji: hands
@@ -19,13 +20,15 @@ import {DemoEscrow} from "../src/DemoEscrow.sol";
 ///   DEPLOYER_PRIVATE_KEY  escrow admin (the customer's own key)
 ///   ESCROW_ADDRESS        DemoEscrow
 ///   OPERATOR_ADDRESS      Secueji operator account
-///   OPERATOR_GAS_WEI      optional; target ETH balance, default 0.01 ether
-contract OnboardOperator is Script {
+///   OPERATOR_GAS_WEI      target ETH balance; required on mainnet (0 disables
+///                         top-up), default 0.01 ether on local / Sepolia
+contract OnboardOperator is DemoScript {
     function run() external {
+        _checkNetwork();
+        uint256 gasTarget = _operatorGasTarget();
         uint256 adminKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         DemoEscrow escrow = DemoEscrow(vm.envAddress("ESCROW_ADDRESS"));
         address operator = vm.envAddress("OPERATOR_ADDRESS");
-        uint256 gasTarget = vm.envOr("OPERATOR_GAS_WEI", uint256(0.01 ether));
         require(escrow.admin() == vm.addr(adminKey), "DEPLOYER_PRIVATE_KEY is not the escrow admin");
 
         vm.startBroadcast(adminKey);

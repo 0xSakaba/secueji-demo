@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {console2} from "forge-std/Script.sol";
+import {DemoScript} from "./DemoScript.sol";
 import {DemoStablecoin} from "../src/DemoStablecoin.sol";
 import {DemoEscrow} from "../src/DemoEscrow.sol";
 
@@ -34,7 +35,7 @@ import {DemoEscrow} from "../src/DemoEscrow.sol";
 ///   TOKEN_ADDRESS, ESCROW_ADDRESS  output of Deploy.s.sol
 ///   DECOY_TOKEN_ADDRESS    optional; deploy a new decoy when unset
 ///   TITLE_SUFFIX           optional; appended to every label, default empty
-contract Seed is Script {
+contract Seed is DemoScript {
     struct Plan {
         string label;
         uint256 amount;
@@ -54,6 +55,7 @@ contract Seed is Script {
     address legacyOracle;
 
     function run() external returns (uint256[] memory ids, DemoStablecoin decoyToken) {
+        _checkNetwork();
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         uint256 buyerKey = vm.envUint("BUYER_PRIVATE_KEY");
         buyer = vm.addr(buyerKey);

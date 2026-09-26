@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {console2} from "forge-std/Script.sol";
+import {DemoScript} from "./DemoScript.sol";
 import {DemoStablecoin} from "../src/DemoStablecoin.sol";
 import {DemoEscrow} from "../src/DemoEscrow.sol";
 import {GuardExecutor} from "../src/GuardExecutor.sol";
@@ -21,8 +22,9 @@ import {GuardExecutor} from "../src/GuardExecutor.sol";
 ///                            (defaults to the deployer)
 ///   PLATFORM_SIGNER_ADDRESS  optional; deploys GuardExecutor with this signer
 ///   APPROVER_ADDRESS         optional; approver registered on GuardExecutor
-contract Deploy is Script {
+contract Deploy is DemoScript {
     function run() external returns (DemoStablecoin token, DemoEscrow escrow, GuardExecutor guard) {
+        _checkNetwork();
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerKey);
         address guardian = vm.envOr("GUARDIAN_ADDRESS", deployer);
